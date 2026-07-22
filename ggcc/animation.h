@@ -1,5 +1,5 @@
 // ggcc_animation
-// ggcc������
+// ggcc动画库
 
 #ifndef __GGCCANIMATION_H__
 #define __GGCCANIMATION_H__
@@ -171,55 +171,61 @@ namespace ggcc {
 
 namespace ggcc {
 
-	// ����Ԥ��
+	// 动画函数
 	namespace anif {
-		// ���Զ���
+		// 瞬间动画
+		#define moment momentFun,0,1
+		realn momentFun(realn x) {
+			if(x<=0)return 0;
+			return 1;
+		}
+		// 线性动画
 		#define linear linearFun,0,1
 		realn linearFun(realn x) {
 			return x;
 		}
-		// ���䶯��
+		// 经典动画
 		#define classics classicsFun,10,0
 		realn classicsFun(realn x) {
 			return pow(1.618, x);
 		}
-		// sin����
+		// sin动画
 		#define sine sineFun,-3.1415926/2,3.1415926/2
 		realn sineFun(realn x) {
 			return sin(x);
 		}
-		// tan����
+		// tan动画
 		#define tanf tanFun,-1.35, 1.35
 		realn tanFun(realn x) {
 			return sin(x) / cos(x);
 		}
-		// tanh����
+		// tanh动画
 		#define tanh tanhFun,-2.5, 2.5
 		realn tanhFun(realn x) {
 			return (exp(x)-exp(-x)) / (exp(x)+exp(-x));
 		}
-		// �ص�����1 (����1.4,�̶�С)
+		// 回弹动画（阻力5）
 		#define bounce bounceFun,-8.9726,0
 		#define bounce1 bounceFun,-8.9726,0
 		realn bounceFun(realn x) {
 			return -7.0 / 51 * sqrt(51) * exp(-7.0 / 10 * x) * sin(1.0 / 10 * sqrt(51) * x) - exp(-7.0 / 10 * x) * cos(1.0 / 10 * sqrt(51) * x);
 		}
-		// �ص�����2 (����1.3,�̶Ƚ�С)
+		// 回弹动画（阻力4）
 		#define bounce2 bounce2Fun,-8.2645,0
 		realn bounce2Fun(realn x) {
 			return -13.0 / 231 * sqrt(231) * exp(-13.0 / 20 * x) * sin(1.0 / 20 * sqrt(231) * x) - exp(-13.0 / 20 * x) * cos(1.0 / 20 * sqrt(231) * x);
 		}
-		// �ص�����3 (����1.2,�̶��е�)
+		// 回弹动画（阻力3）
 		#define bounce3 bounce3Fun,-7.9188,0
 		realn bounce3Fun(realn x) {
 			return -3.0 / 4 * exp(-3.0 / 5 * x) * sin(4.0 / 5 * x) - exp(-3.0 / 5 * x) * cos(4.0 / 5 * x);
 		}
-		// �ص�����4 (����1.1,�̶Ƚϴ�)
+		// 回弹动画（阻力2）
 		#define bounce4 bounce4Fun,-7.5220,0
 		realn bounce4Fun(realn x) {
 			return -11.0 / 93 * sqrt(31) * exp(-11.0 / 20 * x) * sin(3.0 / 20 * sqrt(31) * x) - exp(-11.0 / 20 * x) * cos(3.0 / 20 * sqrt(31) * x);
 		}
-		// �ص�����5 (����1.0,�̶ȴ�)
+		// 回弹动画（阻力1）
 		#define bounce5 bounce5Fun,-7.3448,0
 		realn bounce5Fun(realn x) {
 			return -1.0 / 3 * sqrt(3) * exp(-1.0 / 2 * x) * sin(1.0 / 2 * sqrt(3) * x) - exp(-1.0 / 2 * x) * cos(1.0 / 2 * sqrt(3) * x);
@@ -251,12 +257,14 @@ namespace ggcc {
 			Animation();
 			Animation(realn);
 			Animation(realn, realn);
+		
 			void SetStartPos(realn);
 			void SetTargetPos(realn, realn);
 			void SetMoveStyle(realn (*fun)(realn), realn, realn);
 			void SetDuration(realn);
 			realn GetNowPos();
 			realn GetTargetPos();
+			realn GetStartTime();
 			bool IsRunning();
 			void Stop();
 			void Pause();
@@ -265,13 +273,16 @@ namespace ggcc {
 			void Reset();
 			void Repeat(bool, realn);
 			void Return(bool, realn);
+			void Goto(realn);
 
 			inline void ssp(realn pos) {SetStartPos(pos);}
 			inline void stp(realn pos, realn delay = 0) {SetTargetPos(pos, delay);}
 			inline void sms(realn (*fun)(realn), realn st, realn end) {SetMoveStyle(fun, st, end);}
 			inline void sd(realn duration) {SetDuration(duration);}
 			inline realn gnp() {return GetNowPos();}
+			inline realn gp(realn time) {return GetPos(time);}
 			inline realn gtp() {return GetTargetPos();}
+			inline realn gst() {return GetStartTime();}
 			inline bool is_run() {return IsRunning();}
 			inline void stop() {Stop();}
 			inline void pause() {Pause();}
@@ -280,6 +291,33 @@ namespace ggcc {
 			inline void reset() {Reset();}
 			inline void repeat(bool b, realn delay = 0) {Repeat(b, delay);}
 			inline void retn(bool b, realn delay = 0) {Return(b, delay);}
+			inline void gt(realn pos) {Goto(pos);};
+		
+			realn AniFun(realn x) {
+				if(x<0)return StartPos;
+				if(x>Duration)return TargetPos;
+				realn dtf = FunEnd - FunStart;
+				realn l = Fun(FunEnd) - Fun(FunStart);
+				realn zoom = 1.0 * (TargetPos - StartPos) / l;
+				realn dt = x / Duration * dtf;
+				return (Fun(FunStart + dt) - Fun(FunStart)) * zoom + StartPos;
+			}
+			realn GetPos(realn x) {
+				x-=StartTime;
+				if(Repeat_&&Return_) {
+					x-=int(x/Duration/2)*Duration*2;
+					if(x<Duration)return AniFun(x);
+					else return AniFun(2*Duration-x);
+				} else if(Repeat_&&!Return_) {
+					x-=int(x/Duration)*Duration;
+					return AniFun(x);
+				} else if(!Repeat_&&Return_) {
+					if(x<Duration)return AniFun(x);
+					else if(x<Duration*2)return AniFun(2*Duration-x);
+				} else {
+					return AniFun(x);
+				}
+			}
 	};
 
 	Animation::Animation() {
@@ -322,6 +360,9 @@ namespace ggcc {
 	}
 	realn Animation::GetTargetPos() {
 		return TargetPos;
+	}
+	realn Animation::GetStartTime() {
+		return StartTime;
 	}
 	bool Animation::IsRunning() {
 		if (clock() < StartTime || clock() > StartTime + Duration || IsStopped||!AniEnabled)return false;
@@ -394,6 +435,15 @@ namespace ggcc {
 			Returned = false;
 		}
 		ReturnDelay = delay;
+	}
+	void Animation::Stop() {
+		Update();
+		TargetPos=NowPos;
+		StartPos=NowPos;
+	}
+	void Animation::Goto(realn pos) {
+		TargetPos=pos;
+		StartPos=pos;
 	}
 
 };

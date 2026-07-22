@@ -27,7 +27,7 @@ namespace ggcc {
 		public:
 			vector2d pos = vector2d{0,0};					// 位置
 			realn rotate = 0;								// 旋转弧度
-			string type = "empty";							// 图形类型
+			std::string type = "empty";							// 图形类型
 			// 求支撑点
 			virtual vector2d Support(vector2d u) {
 				return pos;
@@ -109,7 +109,7 @@ namespace ggcc {
 		private:
 			realn r;
 		public:
-			vector<vector2d> p;
+			std::vector<vector2d> p;
 			polygon(vector2d _pos=vector2d{0,0},int _n=0,realn _r=1) {
 				type="polygon";
 				r=_r,pos=_pos;

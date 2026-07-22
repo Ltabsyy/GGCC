@@ -5,7 +5,6 @@
 #define __GGCCMATHPOINT_H__
 
 #include <bits/stdc++.h>
-using namespace std;
 
 using realn=long double;
 
@@ -230,18 +229,18 @@ namespace ggcc {
 	}
 
 	// 转化函数
-	string to_string(point2d a,int p=2) {
-		stringstream ss;
+	std::string to_string(point2d a,int p=2) {
+		std::stringstream ss;
 //		ss.setf(fixed);
 		ss.precision(p);
 		ss<<"("<<a.x<<","<<a.y<<")";
 		return ss.str();
 	}
-	string to_string(point3d a,int p=2) {
-		stringstream ss;
+	std::string to_string(point3d a,int p=2) {
+		std::stringstream ss;
 //		ss.setf(std::ios::fixed);
 		ss.precision(p);
-		ss<<setprecision(p)<<"("<<a.x<<","<<a.y<<","<<a.z<<")";
+		ss<<std::setprecision(p)<<"("<<a.x<<","<<a.y<<","<<a.z<<")";
 		return ss.str();
 	}
 	realn r2a(realn r) {			// 弧度转角度
@@ -255,11 +254,11 @@ namespace ggcc {
 #define G_PI 3.1415926535897932384626433832795
 
 	// 输出流重载
-	ostream& operator <<(ostream& out,const point2d& a) {
+	std::ostream& operator <<(std::ostream& out,const point2d& a) {
 		out<<'('<<a.x<<','<<a.y<<')';
 		return out;
 	}
-	ostream& operator <<(ostream& out,const point3d& a) {
+	std::ostream& operator <<(std::ostream& out,const point3d& a) {
 		out<<'('<<a.x<<','<<a.y<<','<<a.z<<')';
 		return out;
 	}
