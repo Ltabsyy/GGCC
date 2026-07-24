@@ -471,6 +471,11 @@ namespace ggcc {
 			if (Mouse.x >= x1 && Mouse.x < x2 && Mouse.y >= y1 && Mouse.y < y2)return true;
 			return false;
 		}
+		bool MouseInCircle(realn x, realn y, realn r) {
+			realn dx = Mouse.x - x, dy = Mouse.y - y;
+			if (dx * dx + dy * dy <= r * r)return true;
+			return false;
+		}
 		// 实验功能===============
 		int FatherElementDeep = 0;
 		Element* FatherElement = nullptr;
@@ -1203,6 +1208,7 @@ namespace ggcc {
 			}
 		};
 		
+		// 优先级处理类
 		double TopPriority = 0;
 		double WindowTopPriority = 0;
 		class Priority : public Element {
@@ -1412,6 +1418,122 @@ namespace ggcc {
 				return ui::SpaceSize * 4;
 			}
 		};
+		class Layout {
+		public:
+			ui::Element* intf = nullptr;
+			Layout* lo1 = nullptr;
+			Layout* lo2 = nullptr;
+			double split = 0.5;
+			bool movable = true;
+			bool moving = false;
+			SplitStyle split_style = split_main;
+			
+			~Layout() {
+				delete lo1;
+				delete lo2;
+				lo1 = nullptr;
+				lo2 = nullptr;
+			}
+			
+			bool IsMoving() {
+				return moving;
+			}
+			void Split(SplitStyle style, ui::Element* i1 = nullptr, ui::Element* i2 = nullptr) {
+				if (style == split_main) {
+					intf = i1;
+				} else {
+					split_style = style;
+					if (lo1 != nullptr) {
+						delete lo1;
+						lo1 = nullptr;
+					}
+					if (lo2 != nullptr) {
+						delete lo2;
+						lo2 = nullptr;
+					}
+					lo1 = new Layout;
+					lo2 = new Layout;
+					lo1->intf = i1;
+					lo2->intf = i2;
+				}
+			}
+			int Draw(int x, int y, int w, int h, bool check = true) {
+				int k = SpaceSize;
+				if (split_style == split_main && intf != nullptr) {
+					intf->Draw_Auto_Extra(x, y, w, h, check);
+				} else if (split_style == split_row) {
+					if (movable) {
+						if (moving) {
+							MouseCursorStyle = MOUSE_CURSOR_RESIZE_EW;
+							split = 1.0 * (GetMouseX() - x - 4 * dpi) / (w - 8 * dpi);
+							if (split < 0)split = 0;
+							if (split > 1)split = 1;
+							lo1->Draw(x, y, (w - 8 * dpi) * split, h, check && !moving);
+							lo2->Draw(x + (w - 8 * dpi) * split + 8 * dpi, y, (w - 8 * dpi) * (1 - split), h, check && !moving);
+							DrawRectangle(x + (w - 8 * dpi) * split, y, 8 * dpi, h, LIGHTGRAY);
+							DrawLine(x + (w - 8 * dpi) * split + 2 * dpi, y + h / 2 - 10 * dpi, x + (w - 8 * dpi) * split + 2 * dpi, y + h / 2 + 10 * dpi, BLACK);
+							DrawLine(x + (w - 8 * dpi) * split + 6 * dpi, y + h / 2 - 10 * dpi, x + (w - 8 * dpi) * split + 6 * dpi, y + h / 2 + 10 * dpi, BLACK);
+							MouseCursorStyle = MOUSE_CURSOR_RESIZE_EW;
+							if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT))moving = false;
+						} else {
+							lo1->Draw(x, y, (w - 8 * dpi) * split, h, check && !moving);
+							lo2->Draw(x + (w - 8 * dpi) * split + 8 * dpi, y, (w - 8 * dpi) * (1 - split), h, check && !moving);
+							special_effect::DrawMouseRectangle_onlyLight(x + (w - 8 * dpi) * split, y, 8 * dpi, h);
+							DrawLine(x + (w - 8 * dpi) * split + 2 * dpi, y + h / 2 - 10 * dpi, x + (w - 8 * dpi) * split + 2 * dpi, y + h / 2 + 10 * dpi, DARKGRAY);
+							DrawLine(x + (w - 8 * dpi) * split + 6 * dpi, y + h / 2 - 10 * dpi, x + (w - 8 * dpi) * split + 6 * dpi, y + h / 2 + 10 * dpi, DARKGRAY);
+							if (MouseInRect(x + (w - 8 * dpi) * split, y, 8 * dpi, h) && check) {
+								DrawRectangle(x + (w - 8 * dpi) * split + dpi, y, 6 * dpi, h, Fade(LIGHTGRAY, 0.25));
+								MouseCursorStyle = MOUSE_CURSOR_RESIZE_EW;
+								if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))moving = true;
+							}
+						}
+					} else {
+						lo1->Draw(x, y, w * split, h, check);
+						lo2->Draw(x + w * split, y, w * (1 - split), h, check);
+					}
+				} else if (split_style == split_col) {
+					if (movable) {
+						if (moving) {
+							MouseCursorStyle = MOUSE_CURSOR_RESIZE_NS;
+							split = 1.0 * (GetMouseY() - y - 4 * dpi) / (h - 8 * dpi);
+							if (split < 0)split = 0;
+							if (split > 1)split = 1;
+							lo1->Draw(x, y, w, (h - 8 * dpi) * split, check && !moving);
+							lo2->Draw(x, y + (h - 8 * dpi) * split + 8 * dpi, w, (h - 8 * dpi) * (1 - split), check && !moving);
+							DrawRectangle(x, y + (h - 8 * dpi) * split, w, 8 * dpi, LIGHTGRAY);
+							DrawLine(x + w / 2 - 10 * dpi, y + (h - 8 * dpi) * split + 2 * dpi, x + w / 2 + 10 * dpi, y + (h - 8 * dpi) * split + 2 * dpi, BLACK);
+							DrawLine(x + w / 2 - 10 * dpi, y + (h - 8 * dpi) * split + 6 * dpi, x + w / 2 + 10 * dpi, y + (h - 8 * dpi) * split + 6 * dpi, BLACK);
+							if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT))moving = false;
+						} else {
+							lo1->Draw(x, y, w, (h - 8 * dpi) * split, check && !moving);
+							lo2->Draw(x, y + (h - 8 * dpi) * split + 8 * dpi, w, (h - 8 * dpi) * (1 - split), check && !moving);
+							special_effect::DrawMouseRectangle_onlyLight(x, y + (h - 8 * dpi) * split, w, 8 * dpi);
+							DrawLine(x + w / 2 - 10 * dpi, y + (h - 8 * dpi) * split + 2 * dpi, x + w / 2 + 10 * dpi, y + (h - 8 * dpi) * split + 2 * dpi, DARKGRAY);
+							DrawLine(x + w / 2 - 10 * dpi, y + (h - 8 * dpi) * split + 6 * dpi, x + w / 2 + 10 * dpi, y + (h - 8 * dpi) * split + 6 * dpi, DARKGRAY);
+							if (MouseInRect(x, y + (h - 8 * dpi) * split, w, 8 * dpi) && check) {
+								DrawRectangle(x, y + (h - 8 * dpi) * split + dpi, w, 6 * dpi, Fade(LIGHTGRAY, 0.25));
+								MouseCursorStyle = MOUSE_CURSOR_RESIZE_NS;
+								if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))moving = true;
+							}
+						}
+					} else {
+						lo1->Draw(x, y, w, h * split, check);
+						lo2->Draw(x, y + h * split, w, h * (1 - split), check);
+					}
+				}
+				return h;
+			}
+			
+		};
+		class Sider {
+		public:
+			Element* ele = nullptr;
+			SiderPosition spos = spos_top;
+			int occupy = 50;
+		};
+		class SiderManager {
+		public:
+		};
 		class Title : public Element {
 		public:
 			std::string text = "Title";
@@ -1515,7 +1637,7 @@ namespace ggcc {
 		public:
 			std::string text = "Button";
 			bool click = false;
-			Button(std::string text_="Button") {
+			Button(std::string text_ = "Button") {
 				text = text_;
 			}
 			int Draw(int x, int y, int w = 600, bool check = true) {
@@ -3057,12 +3179,6 @@ namespace ggcc {
 			}
 			
 		};
-		class Sider {
-		public:
-			Element* ele = nullptr;
-			SiderPosition spos = spos_top;
-			int occupy = 50;
-		};
 		struct InputHistory {
 			InputBoxOperation op = operation_insert;
 			vector2d pos1;
@@ -3242,7 +3358,7 @@ namespace ggcc {
 					if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))ChooseInputBox = this;
 				} else if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && ChooseInputBox == this)ChooseInputBox = NULL;
 				if (!choose && ChooseInputBox == this)choose = true, move.stp(1);
-				if (choose && ChooseInputBox != this)choose = false, move.stp(0),start_pos = input_pos=choose_pos=choose_pos2=0;;
+				if (choose && ChooseInputBox != this)choose = false, move.stp(0), start_pos = input_pos = choose_pos = choose_pos2 = 0;;
 				if (choose) {
 					// 鼠标检查
 					if ( MouseInRect(x +  SpaceSize, y + h / 2, w -  SpaceSize,  UnitHeight - h)) {
@@ -3380,7 +3496,7 @@ namespace ggcc {
 					if (start_pos < 0)start_pos = 0;
 				} else start_pos = 0;
 				// 焦点检查
-				if (!check && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))start_pos = input_pos=choose_pos=choose_pos2=0;
+				if (!check && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))start_pos = input_pos = choose_pos = choose_pos2 = 0;
 				if (!choose && ChooseInputBox == this)choose = true, move.stp(1);
 				if (choose && ChooseInputBox != this)choose = false, move.stp(0);
 				// 绘制光标
@@ -4211,22 +4327,22 @@ namespace ggcc {
 		public:
 			int click = -1;
 			TopMenuButton() {
-				extra=true;
+				extra = true;
 			}
 			void AddButton(std::string text_) {
 				icon.push_back("");
 				text.push_back(text_);
 			}
-			void AddButton(std::string icon_,std::string text_) {
+			void AddButton(std::string icon_, std::string text_) {
 				icon.push_back(icon_);
 				text.push_back(text_);
 			}
 			int DrawOne(int id, int x, int y, int w, int h, bool check = true) {
 				int t = (UnitHeight * 2 - TextHeight) / 2;
 				special_effect::DrawMouseRectangle(x, y + SpaceSize / 2, w, h - SpaceSize);
-				PrintIcon(x + SpaceSize*1.5, y + t, icon[id], WHITE);
-				if(icon[id]=="")Print(x + SpaceSize*1.5 + wp::strLen(icon[id])*ui::TextHeight/2, y + t, text[id], WHITE);
-				else Print(x + SpaceSize * 2 + wp::strLen(icon[id])*ui::TextHeight/2, y + t, text[id], WHITE);
+				PrintIcon(x + SpaceSize * 1.5, y + t, icon[id], WHITE);
+				if (icon[id] == "")Print(x + SpaceSize * 1.5 + wp::strLen(icon[id]) * ui::TextHeight / 2, y + t, text[id], WHITE);
+				else Print(x + SpaceSize * 2 + wp::strLen(icon[id])*ui::TextHeight / 2, y + t, text[id], WHITE);
 				if (MouseInRect(x, y + SpaceSize / 2, w, h - SpaceSize)) {
 					DrawRectangle(x, y + SpaceSize / 2, w, h - SpaceSize, ColorF(ChooseColor));
 					if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && check)DrawRectangle(x, y + SpaceSize / 2, w, h - SpaceSize, ColorF(ChooseColor));
@@ -4238,8 +4354,8 @@ namespace ggcc {
 				int w2 = dpi;
 				click = -1;
 				for (int i = 0; i < text.size(); i++) {
-					int s = (wp::strLen(text[i]) + wp::strLen(icon[i]))*TextHeight/2;
-					if(icon[i]!="")s+=ui::SpaceSize;
+					int s = (wp::strLen(text[i]) + wp::strLen(icon[i])) * TextHeight / 2;
+					if (icon[i] != "")s += ui::SpaceSize;
 					DrawOne(i, x + w2, y, s + SpaceSize * 3, h, check);
 					w2 += s + SpaceSize * 3 + dpi;
 				}
@@ -4474,42 +4590,6 @@ namespace ggcc {
 			}
 		} mainintf;
 		using interface = Interface;
-		class Layout {
-		public:
-			ui::interface* intf = nullptr;
-			Layout* lo1 = nullptr;
-			Layout* lo2 = nullptr;
-			double split = 0.5;
-			bool movable = true;
-			bool moving = false;
-			SplitStyle split_style = split_main;
-			
-			~Layout() {
-				delete lo1;
-				delete lo2;
-			}
-			
-			bool IsMoving() {
-				return moving;
-			}
-			void Split(SplitStyle style, ui::interface* i1 = nullptr, ui::interface* i2 = nullptr) {
-				if (style == split_main) {
-					intf = i1;
-				} else {
-					split_style = style;
-					if (lo1 != nullptr) {
-						delete lo1;
-					}
-					if (lo2 != nullptr) {
-						delete lo2;
-					}
-					lo1 = new Layout;
-					lo2 = new Layout;
-					lo1->intf = i1;
-					lo2->intf = i2;
-				}
-			}
-		};
 		class Window : public Priority {
 		public:
 			std::string title = "Window";
@@ -4528,7 +4608,6 @@ namespace ggcc {
 			Layout layout;
 			
 			std::vector<Sider> sider;
-			SliderBar sbar;
 			void AddSider(Element* ele, SiderPosition spos, int occupy = -1) {
 				Sider temp;
 				temp.ele = ele;
@@ -4586,71 +4665,6 @@ namespace ggcc {
 				if (X < 0)X = 0;
 				if (X + W > winW)X = winW - W;
 				if (Y + H > winH)Y = winH - H;
-			}
-			void DrawLayout(Layout* lo, int x, int y, int w, int h, bool check = true) {
-				int k = SpaceSize;
-				if (lo->split_style == split_main && lo->intf != nullptr) {
-					lo->intf->Draw_Auto_Extra(x, y, w, h, check);
-				} else if (lo->split_style == split_row) {
-					if (lo->movable) {
-						if (lo->moving) {
-							MouseCursorStyle = MOUSE_CURSOR_RESIZE_EW;
-							lo->split = 1.0 * (GetMouseX() - x - 4 * dpi) / (w - 8 * dpi);
-							if (lo->split < 0)lo->split = 0;
-							if (lo->split > 1)lo->split = 1;
-							DrawLayout(lo->lo1, x, y, (w - 8 * dpi) * lo->split, h, check && !lo->moving);
-							DrawLayout(lo->lo2, x + (w - 8 * dpi) * lo->split + 8 * dpi, y, (w - 8 * dpi) * (1 - lo->split), h, check && !lo->moving);
-							DrawRectangle(x + (w - 8 * dpi) * lo->split, y, 8 * dpi, h, LIGHTGRAY);
-							DrawLine(x + (w - 8 * dpi) * lo->split + 2 * dpi, y + h / 2 - 10 * dpi, x + (w - 8 * dpi) * lo->split + 2 * dpi, y + h / 2 + 10 * dpi, BLACK);
-							DrawLine(x + (w - 8 * dpi) * lo->split + 6 * dpi, y + h / 2 - 10 * dpi, x + (w - 8 * dpi) * lo->split + 6 * dpi, y + h / 2 + 10 * dpi, BLACK);
-							MouseCursorStyle = MOUSE_CURSOR_RESIZE_EW;
-							if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT))lo->moving = false;
-						} else {
-							DrawLayout(lo->lo1, x, y, (w - 8 * dpi) * lo->split, h, check && !lo->moving);
-							DrawLayout(lo->lo2, x + (w - 8 * dpi) * lo->split + 8 * dpi, y, (w - 8 * dpi) * (1 - lo->split), h, check && !lo->moving);
-							special_effect::DrawMouseRectangle_onlyLight(x + (w - 8 * dpi) * lo->split, y, 8 * dpi, h);
-							DrawLine(x + (w - 8 * dpi) * lo->split + 2 * dpi, y + h / 2 - 10 * dpi, x + (w - 8 * dpi) * lo->split + 2 * dpi, y + h / 2 + 10 * dpi, DARKGRAY);
-							DrawLine(x + (w - 8 * dpi) * lo->split + 6 * dpi, y + h / 2 - 10 * dpi, x + (w - 8 * dpi) * lo->split + 6 * dpi, y + h / 2 + 10 * dpi, DARKGRAY);
-							if (MouseInRect(x + (w - 8 * dpi) * lo->split, y, 8 * dpi, h) && check) {
-								DrawRectangle(x + (w - 8 * dpi) * lo->split + dpi, y, 6 * dpi, h, Fade(LIGHTGRAY, 0.25));
-								MouseCursorStyle = MOUSE_CURSOR_RESIZE_EW;
-								if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))lo->moving = true;
-							}
-						}
-					} else {
-						DrawLayout(lo->lo1, x, y, w * lo->split, h, check);
-						DrawLayout(lo->lo2, x + w * lo->split, y, w * (1 - lo->split), h, check);
-					}
-				} else if (lo->split_style == split_col) {
-					if (lo->movable) {
-						if (lo->moving) {
-							MouseCursorStyle = MOUSE_CURSOR_RESIZE_NS;
-							lo->split = 1.0 * (GetMouseY() - y - 4 * dpi) / (h - 8 * dpi);
-							if (lo->split < 0)lo->split = 0;
-							if (lo->split > 1)lo->split = 1;
-							DrawLayout(lo->lo1, x, y, w, (h - 8 * dpi) * lo->split, check && !lo->moving);
-							DrawLayout(lo->lo2, x, y + (h - 8 * dpi) * lo->split + 8 * dpi, w, (h - 8 * dpi) * (1 - lo->split), check && !lo->moving);
-							DrawRectangle(x, y + (h - 8 * dpi) * lo->split, w, 8 * dpi, LIGHTGRAY);
-							DrawLine(x + w / 2 - 10 * dpi, y + (h - 8 * dpi) * lo->split + 2 * dpi, x + w / 2 + 10 * dpi, y + (h - 8 * dpi) * lo->split + 2 * dpi, BLACK);
-							DrawLine(x + w / 2 - 10 * dpi, y + (h - 8 * dpi) * lo->split + 6 * dpi, x + w / 2 + 10 * dpi, y + (h - 8 * dpi) * lo->split + 6 * dpi, BLACK);
-							if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT))lo->moving = false;
-						} else {
-							DrawLayout(lo->lo1, x, y, w, (h - 8 * dpi) * lo->split, check && !lo->moving);
-							DrawLayout(lo->lo2, x, y + (h - 8 * dpi) * lo->split + 8 * dpi, w, (h - 8 * dpi) * (1 - lo->split), check && !lo->moving);
-							special_effect::DrawMouseRectangle_onlyLight(x, y + (h - 8 * dpi) * lo->split, w, 8 * dpi);
-							DrawLine(x + w / 2 - 10 * dpi, y + (h - 8 * dpi) * lo->split + 2 * dpi, x + w / 2 + 10 * dpi, y + (h - 8 * dpi) * lo->split + 2 * dpi, DARKGRAY);
-							DrawLine(x + w / 2 - 10 * dpi, y + (h - 8 * dpi) * lo->split + 6 * dpi, x + w / 2 + 10 * dpi, y + (h - 8 * dpi) * lo->split + 6 * dpi, DARKGRAY);
-							if (MouseInRect(x, y + (h - 8 * dpi) * lo->split, w, 8 * dpi) && check) {
-								DrawRectangle(x, y + (h - 8 * dpi) * lo->split + dpi, w, 6 * dpi, Fade(LIGHTGRAY, 0.25));
-								MouseCursorStyle = MOUSE_CURSOR_RESIZE_NS;
-								if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))lo->moving = true;
-							}
-						}
-					} else {
-						DrawLayout(lo->lo1, x, y, w, h * lo->split, check);
-						DrawLayout(lo->lo2, x, y + h * lo->split, w, h * (1 - lo->split), check);
-					}
-				}
 			}
 			int Draw(int x, int y, int w, int h, bool check = true) {
 				if (pop) {
@@ -4772,7 +4786,7 @@ namespace ggcc {
 				hani.update();
 				BeginScissor(x, y, w, h);
 				valid_x = x, valid_y = y, valid_w = w, valid_h = h;
-				DrawLayout(&layout, x, y, w, h, check && (!(rx || ry || rw || rh) | !IsMouseButtonDown(MOUSE_BUTTON_LEFT)));
+				layout.Draw(x, y, w, h, check && (!(rx || ry || rw || rh) | !IsMouseButtonDown(MOUSE_BUTTON_LEFT)));
 				EndScissor();
 				EndScissor();
 				xani.update();
