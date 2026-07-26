@@ -12,15 +12,27 @@ namespace ggcc {
 		class TextBuffer {
 		private:
 			std::string text;
+			std::string basic;
 			std::map <std::string, bool> used;
+			std::map <std::string, bool> load;
 			bool change = false;
+			int basic_maximum = 1000;
+			int maximum = 1000;
+			int load_sum = 0;
 		public:
 			TextBuffer(std::string str = "") {
 				used.clear();
 				Check(str);
+				basic = str;
 			}
 			std::string Text() {
 				return text;
+			}
+			void SetMaximum(int maxn) {
+				basic_maximum = maxn;
+			}
+			int GetMaximum() {
+				return maximum;
 			}
 			void Clear() {
 				text = "";
@@ -32,6 +44,10 @@ namespace ggcc {
 					used[str] = true;
 					text += str;
 					change = true;
+				}
+				if (load[str] == false) {
+					load[str] = true;
+					load_sum += str.size();
 				}
 			}
 			void Check(std::string str) {
@@ -48,7 +64,7 @@ namespace ggcc {
 				}
 			}
 			void Set(std::string str) {
-				text="";
+				text = "";
 				change = true;
 				used.clear();
 				Check(str);
@@ -59,6 +75,20 @@ namespace ggcc {
 					return true;
 				}
 				return false;
+			}
+			void Update() {
+				if (text.size() > maximum) {
+					if (load_sum > maximum) {
+						maximum *= 1.5;
+					} else Set(basic);
+				}
+				if (text.size() < maximum * 0.35) {
+					maximum /= 2;
+					if (maximum < basic_maximum)maximum = basic_maximum;
+				}
+				load.clear();
+				load_sum = 0;
+				Check(basic);
 			}
 		};
 
@@ -187,7 +217,9 @@ namespace ggcc {
 			*codepointsResultCount = codepointsNoDupsCount;
 			return codepointsNoDups;
 		}
-		std::string GetChar(int a) {
+
+		// 编码转换功能
+		std::string Unicode_UTF8(int a) {
 			std::string str = "";
 			if (a < 128)str += char(a);
 			else if (a < 4096) {
@@ -199,6 +231,9 @@ namespace ggcc {
 				str += char(a % 64 + 128);
 			}
 			return str;
+		}
+		inline std::string GetChar(int a) {
+			return Unicode_UTF8(a);
 		}
 	}
 }
