@@ -113,13 +113,12 @@ namespace ggcc {
 			}
 			return count;
 		}
-		int GetStringLength(std::string str) {
-			return str.size() - GetChineseCharacterCount(str);
-		}
 		int strLen(std::string str) {
+			if (str.size() == 0)return 0;
 			int count = 0, i = 0;
 			while (i < str.size()) {
-				if ((str[i] & 0xF8) == 0xF8)i += 5, count += 2;
+				if (str[i] == '\t')i++, count = floor(count / 4.0) * 4 + 4;
+				else if ((str[i] & 0xF8) == 0xF8)i += 5, count += 2;
 				else if ((str[i] & 0xF0) == 0xF0)i += 4, count += 2;
 				else if ((str[i] & 0xE0) == 0xE0)i += 3, count += 2;
 				else if ((str[i] & 0xC0) == 0xC0)i += 2, count += 2;
@@ -127,18 +126,26 @@ namespace ggcc {
 			}
 			return count;
 		}
+		template <typename T>
+		std::string tostr(T text) {
+			std::stringstream ss;
+			ss<<text;
+			return ss.str();
+		}
 
 		// 输入输出相关功能
 		int Index2Cursor(std::vector<std::string>& input, int line, int index) {
+			if (index <= 0)return 0;
 			if (line >= input.size())return 0;
 			return wp::strLen(input[line].substr(0, index));
 		}
 		int Cursor2Index(std::vector<std::string>& input, int line, int cursor) {
 			if (line >= input.size())return 0;
-			if (cursor == 0)return 0;
+			if (cursor <= 0)return 0;
 			int count = 0, i = 0;
 			while (i < input[line].size()) {
-				if ((input[line][i] & 0xF8) == 0xF8)i += 5, count += 2;
+				if (input[line][i] == '\t')i++, count = floor(count / 4.0) * 4 + 4;
+				else if ((input[line][i] & 0xF8) == 0xF8)i += 5, count += 2;
 				else if ((input[line][i] & 0xF0) == 0xF0)i += 4, count += 2;
 				else if ((input[line][i] & 0xE0) == 0xE0)i += 3, count += 2;
 				else if ((input[line][i] & 0xC0) == 0xC0)i += 2, count += 2;
@@ -148,7 +155,7 @@ namespace ggcc {
 			return input[line].size();
 		}
 		int GetPreCharacter(std::vector<std::string>& input, int line, int index) {
-			if (index == 0)return 0;
+			if (index <= 0)return 0;
 			int tindex = index;
 			index--;
 			while (index >= 0) {
@@ -158,6 +165,7 @@ namespace ggcc {
 			return tindex - index;
 		}
 		int GetNextCharacter(std::vector<std::string>& input, int line, int index) {
+			if (index < 0)return 0;
 			if (index >= input[line].size())return 0;
 			if ((input[line][index] & 0xF8) == 0xF8)return 5;
 			else if ((input[line][index] & 0xF0) == 0xF0)return 4;
@@ -172,7 +180,8 @@ namespace ggcc {
 			if (cursor <= 0)return 0;
 			int count = 0, i = 0;
 			while (i < input.size()) {
-				if ((input[i] & 0xF8) == 0xF8)i += 5, count += 2;
+				if (input[i] == '\t')i++, count = floor(count / 4.0) * 4 + 4;
+				else if ((input[i] & 0xF8) == 0xF8)i += 5, count += 2;
 				else if ((input[i] & 0xF0) == 0xF0)i += 4, count += 2;
 				else if ((input[i] & 0xE0) == 0xE0)i += 3, count += 2;
 				else if ((input[i] & 0xC0) == 0xC0)i += 2, count += 2;
@@ -182,7 +191,7 @@ namespace ggcc {
 			return input.size();
 		}
 		int GetPreCharacter(std::string& input, int index) {
-			if (index == 0)return 0;
+			if (index <= 0)return 0;
 			int tindex = index;
 			index--;
 			while (index >= 0) {
@@ -232,8 +241,27 @@ namespace ggcc {
 			}
 			return str;
 		}
+//		std::string UTF8_Unicode(string a) {
+//			std::string str = "";
+//			if (a < 128)str += char(a);
+//			else if (a < 4096) {
+//				str += char(a / 64 + 192);
+//				str += char(a % 64 + 128);
+//			} else {
+//				str += char(a / 4096 + 224);
+//				str += char(a % 4096 / 64 + 128);
+//				str += char(a % 64 + 128);
+//			}
+//			return str;
+//		}
 		inline std::string GetChar(int a) {
 			return Unicode_UTF8(a);
+		}
+
+		// 字体相关功能
+		bool IsIcon(int a) {
+			if (a >= 58945 && a <= 63692)return true;
+			else return false;
 		}
 	}
 }

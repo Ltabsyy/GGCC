@@ -171,7 +171,7 @@ namespace ggcc {
 			
 			// 是否发生碰撞
 			bool IsCollide(shape *a,shape *b) {
-				
+				return false;
 			}
 			
 		}

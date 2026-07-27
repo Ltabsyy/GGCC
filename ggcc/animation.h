@@ -15,7 +15,41 @@
 
 using namespace std;
 namespace ggcc {
-
+	
+	// 计时器
+	unsigned long long StartGClcok = 0;
+	unsigned long long LastUpdateGClock = 0;
+	bool GClockInited = false;
+	long long gclock() {
+		if(!GClockInited) {
+			GClockInited = true;
+			timespec tp;
+			clock_gettime(CLOCK_REALTIME, &tp);
+			StartGClcok = (unsigned long long)(tp.tv_sec) * 1000 + (unsigned long long)(tp.tv_nsec / 1000000);
+			LastUpdateGClock = StartGClcok;
+			return 0;
+		}
+		timespec tp;
+		clock_gettime(CLOCK_REALTIME, &tp);
+		unsigned long long now = tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
+		return (long long)(now - StartGClcok);
+	}
+	void update_gclock() {
+		if(!GClockInited) {
+			GClockInited = true;
+			timespec tp;
+			clock_gettime(CLOCK_REALTIME, &tp);
+			StartGClcok = (unsigned long long)(tp.tv_sec) * 1000 + (unsigned long long)(tp.tv_nsec / 1000000);
+			LastUpdateGClock = StartGClcok;
+		} else {
+			timespec tp;
+			clock_gettime(CLOCK_REALTIME, &tp);
+			unsigned long long now = tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
+			if(now - LastUpdateGClock > 100) StartGClcok += now - LastUpdateGClock - 16;
+			LastUpdateGClock = now;
+		}
+	}
+	
 	class Animation {
 		private:
 			realn StartPos = 0;
@@ -61,7 +95,7 @@ namespace ggcc {
 	}
 	void Animation::SetStartPos(realn Pos) {
 		StartPos = Pos;
-		LastUpdateClock = clock();
+		LastUpdateClock = gclock();
 		NowPos = Pos;
 	}
 	void Animation::SetTargetPos(realn Pos) {
@@ -84,11 +118,11 @@ namespace ggcc {
 	}
 	void Animation::Update() {
 		if (MoveStyle == 0) {
-			NowPos = CreateAni0(NowPos, TargetPos, clock() - LastUpdateClock);
-			LastUpdateClock = clock();
+			NowPos = CreateAni0(NowPos, TargetPos, gclock() - LastUpdateClock);
+			LastUpdateClock = gclock();
 		} else if (MoveStyle == 1) {
-			NowPos = CreateAni1(NowPos, TargetPos, clock() - LastUpdateClock);
-			LastUpdateClock = clock();
+			NowPos = CreateAni1(NowPos, TargetPos, gclock() - LastUpdateClock);
+			LastUpdateClock = gclock();
 		}
 	}
 
@@ -170,6 +204,40 @@ namespace ggcc {
 #define MAXANI 1024
 
 namespace ggcc {
+	
+	// 计时器
+	unsigned long long StartGClcok = 0;
+	unsigned long long LastUpdateGClock = 0;
+	bool GClockInited = false;
+	long long gclock() {
+		if(!GClockInited) {
+			GClockInited = true;
+			timespec tp;
+			clock_gettime(CLOCK_REALTIME, &tp);
+			StartGClcok = (unsigned long long)(tp.tv_sec) * 1000 + (unsigned long long)(tp.tv_nsec / 1000000);
+			LastUpdateGClock = StartGClcok;
+			return 0;
+		}
+		timespec tp;
+		clock_gettime(CLOCK_REALTIME, &tp);
+		unsigned long long now = tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
+		return (long long)(now - StartGClcok);
+	}
+	void update_gclock() {
+		if(!GClockInited) {
+			GClockInited = true;
+			timespec tp;
+			clock_gettime(CLOCK_REALTIME, &tp);
+			StartGClcok = (unsigned long long)(tp.tv_sec) * 1000 + (unsigned long long)(tp.tv_nsec / 1000000);
+			LastUpdateGClock = StartGClcok;
+		} else {
+			timespec tp;
+			clock_gettime(CLOCK_REALTIME, &tp);
+			unsigned long long now = tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
+			if(now - LastUpdateGClock > 100) StartGClcok += now - LastUpdateGClock - 16;
+			LastUpdateGClock = now;
+		}
+	}
 
 	// 动画函数
 	namespace anif {
@@ -186,8 +254,14 @@ namespace ggcc {
 		}
 		// 经典动画
 		#define classics classicsFun,10,0
+		#define classics_r classicsFun,0,10
+		#define classics_d classicsdFun,0,20
 		realn classicsFun(realn x) {
 			return pow(1.618, x);
+		}
+		realn classicsdFun(realn x) {
+			if(x<10)return pow(1.618, x);
+			else return pow(1.618,10)*2-pow(1.618,20-x)+1;
 		}
 		// sin动画
 		#define sine sineFun,-3.1415926/2,3.1415926/2
@@ -234,23 +308,24 @@ namespace ggcc {
 
 	int AniTotal = 0;
 	int AniEnabled = 1;
+	bool ContinuityCheck = true;
+	
 	class Animation {
 		private:
 			realn StartPos = 0;
 			realn TargetPos = 0;
-			realn StartTime = 0;
-			realn Duration = 500;
+			int StartTime = 0;
+			int Duration = 500;
+			int RepeatDelay = 0;
+			int ReturnDelay = 0;
 			realn NowPos;
-			int LastUpdateClock = 0;
 			realn (*Fun)(realn) = anif::classicsFun;
 			realn FunStart = 10;
 			realn FunEnd = 0;
 			bool IsStopped = false;
 			bool Repeat_ = false;
-			realn RepeatDelay = 0;
 			bool Return_ = false;
 			bool Returned = false;
-			realn ReturnDelay = 0;
 
 		public:
 			~Animation() {AniTotal--;}
@@ -258,40 +333,42 @@ namespace ggcc {
 			Animation(realn);
 			Animation(realn, realn);
 		
-			void SetStartPos(realn);
-			void SetTargetPos(realn, realn);
-			void SetMoveStyle(realn (*fun)(realn), realn, realn);
-			void SetDuration(realn);
+			Animation& SetStartPos(realn);
+			Animation& SetTargetPos(realn, int);
+			Animation& SetMoveStyle(realn (*fun)(realn), realn, realn);
+			Animation& SetDuration(int);
 			realn GetNowPos();
 			realn GetTargetPos();
-			realn GetStartTime();
+			realn GetStartPos();
+			int GetStartTime();
 			bool IsRunning();
-			void Stop();
-			void Pause();
-			void Continue();
-			void Update();
-			void Reset();
-			void Repeat(bool, realn);
-			void Return(bool, realn);
-			void Goto(realn);
+			Animation& Stop();
+			Animation& Pause();
+			Animation& Continue();
+			Animation& Update();
+			Animation& Reset();
+			Animation& Repeat(bool, int);
+			Animation& Return(bool, int);
+			Animation& Goto(realn);
 
-			inline void ssp(realn pos) {SetStartPos(pos);}
-			inline void stp(realn pos, realn delay = 0) {SetTargetPos(pos, delay);}
-			inline void sms(realn (*fun)(realn), realn st, realn end) {SetMoveStyle(fun, st, end);}
-			inline void sd(realn duration) {SetDuration(duration);}
+			inline Animation& ssp(realn pos) {return SetStartPos(pos);}
+			inline Animation& stp(realn pos, int delay = 0) {return SetTargetPos(pos, delay);}
+			inline Animation& sms(realn (*fun)(realn), realn st, realn end) {return SetMoveStyle(fun, st, end);}
+			inline Animation& sd(int duration) {return SetDuration(duration);}
+			inline realn gp(int time) {return GetPos(time);}
 			inline realn gnp() {return GetNowPos();}
-			inline realn gp(realn time) {return GetPos(time);}
+			inline realn gsp() {return GetStartPos();}
 			inline realn gtp() {return GetTargetPos();}
-			inline realn gst() {return GetStartTime();}
+			inline int gst() {return GetStartTime();}
 			inline bool is_run() {return IsRunning();}
-			inline void stop() {Stop();}
-			inline void pause() {Pause();}
-			inline void cont() {Continue();}
-			inline void update() {Update();}
-			inline void reset() {Reset();}
-			inline void repeat(bool b, realn delay = 0) {Repeat(b, delay);}
-			inline void retn(bool b, realn delay = 0) {Return(b, delay);}
-			inline void gt(realn pos) {Goto(pos);};
+			inline Animation& stop() {return Stop();}
+			inline Animation& pause() {return Pause();}
+			inline Animation& cont() {return Continue();}
+			inline Animation& update() {return Update();}
+			inline Animation& reset() {return Reset();}
+			inline Animation& repeat(bool b, int delay = 0) {return Repeat(b, delay);}
+			inline Animation& retn(bool b, int delay = 0) {return Return(b, delay);}
+			inline Animation& gt(realn pos) {return Goto(pos);};
 		
 			realn AniFun(realn x) {
 				if(x<0)return StartPos;
@@ -305,15 +382,15 @@ namespace ggcc {
 			realn GetPos(realn x) {
 				x-=StartTime;
 				if(Repeat_&&Return_) {
-					x-=int(x/Duration/2)*Duration*2;
-					if(x<Duration)return AniFun(x);
-					else return AniFun(2*Duration-x);
+					x-=floor(x/(Duration*2+RepeatDelay+ReturnDelay))*(Duration*2+RepeatDelay+ReturnDelay);
+					if(x<Duration+ReturnDelay)return AniFun(x);
+					else return AniFun((Duration*2+ReturnDelay)-x);
 				} else if(Repeat_&&!Return_) {
-					x-=int(x/Duration)*Duration;
+					x-=floor(x/(Duration+RepeatDelay))*(Duration+RepeatDelay);
 					return AniFun(x);
 				} else if(!Repeat_&&Return_) {
 					if(x<Duration)return AniFun(x);
-					else if(x<Duration*2)return AniFun(2*Duration-x);
+					else if(x<Duration*2+ReturnDelay)return AniFun(2*Duration+ReturnDelay-x);
 				} else {
 					return AniFun(x);
 				}
@@ -322,37 +399,41 @@ namespace ggcc {
 
 	Animation::Animation() {
 		NowPos = StartPos = TargetPos = 0;
-		StartTime = clock();
+		StartTime = gclock();
 		AniTotal++;
 	}
 	Animation::Animation(realn pos) {
 		NowPos = StartPos = TargetPos = pos;
-		StartTime = clock();
+		StartTime = gclock();
 		AniTotal++;
 	}
 	Animation::Animation(realn spos, realn tpos) {
 		NowPos = StartPos = spos;
 		TargetPos = tpos;
-		StartTime = clock();
+		StartTime = gclock();
 		AniTotal++;
 	}
-	void Animation::SetStartPos(realn pos) {
+	Animation& Animation::SetStartPos(realn pos) {
 		StartPos = NowPos = TargetPos = pos;
-		StartTime = clock();
+		StartTime = gclock();
+		return *this;
 	}
-	void Animation::SetTargetPos(realn pos, realn delay = 0) {
-		if (pos == TargetPos)return;
+	Animation& Animation::SetTargetPos(realn pos, int delay = 0) {
+		if (pos == TargetPos)return *this;
 		StartPos = NowPos;
 		TargetPos = pos;
-		StartTime = clock() + delay;
+		StartTime = gclock() + delay;
+		return *this;
 	}
-	void Animation::SetMoveStyle(realn (*fun)(realn), realn start, realn end) {
+	Animation& Animation::SetMoveStyle(realn (*fun)(realn), realn start, realn end) {
 		Fun = fun;
 		FunStart = start;
 		FunEnd = end;
+		return *this;
 	}
-	void Animation::SetDuration(realn time) {
+	Animation& Animation::SetDuration(int time) {
 		Duration = time;
+		return *this;
 	}
 	realn Animation::GetNowPos() {
 		if(AniEnabled==0)return TargetPos;
@@ -361,32 +442,34 @@ namespace ggcc {
 	realn Animation::GetTargetPos() {
 		return TargetPos;
 	}
-	realn Animation::GetStartTime() {
+	int Animation::GetStartTime() {
 		return StartTime;
 	}
+	realn Animation::GetStartPos() {
+		return StartPos;
+	}
 	bool Animation::IsRunning() {
-		if (clock() < StartTime || clock() > StartTime + Duration || IsStopped||!AniEnabled)return false;
+		if (gnp()==gtp())return false;
 		else return true;
 	}
-	void Animation::Pause() {
+	Animation& Animation::Pause() {
 		IsStopped = true;
+		return *this;
 	}
-	void Animation::Continue() {
+	Animation& Animation::Continue() {
 		IsStopped = false;
+		return *this;
 	}
-	void Animation::Update() {
-		int NowTime = clock();
+	Animation& Animation::Update() {
+		int NowTime = gclock();
 		realn dtf = FunEnd - FunStart;
-		if (NowTime < StartTime) {
-			LastUpdateClock = StartTime;
-			return;
-		}
+		if (NowTime < StartTime) return *this;
 		if (NowTime > StartTime + Duration) {
 			if (Repeat_) {
 				if(!Return_||Returned) {
 					Returned=false;
 					NowPos = StartPos;
-					NowTime = clock();
+					NowTime = gclock();
 					StartTime += Duration + RepeatDelay;
 				}
 			}
@@ -395,17 +478,17 @@ namespace ggcc {
 				realn t=StartPos;
 				StartPos=TargetPos;
 				TargetPos=t;
-				NowTime = clock();
+				NowTime = gclock();
 				StartTime += Duration + ReturnDelay;
 				Returned=true;
 			}
 			else NowPos = TargetPos;
-			return;
+			return *this;
 		}
 		if (AniEnabled == 1) {
 			realn l = Fun(FunEnd) - Fun(FunStart);
 			realn zoom = 1.0 * (TargetPos - StartPos) / l;
-			realn dt = (NowTime - StartTime) / Duration * dtf;
+			realn dt = 1.0 * (NowTime - StartTime) / Duration * dtf;
 			NowPos = (Fun(FunStart + dt) - Fun(FunStart)) * zoom + StartPos;
 		} else if (AniEnabled == 0) {
 			NowPos = TargetPos;
@@ -413,19 +496,22 @@ namespace ggcc {
 			realn dtf = 1;
 			realn l = 1;
 			realn zoom = 1.0 * (TargetPos - StartPos) / l;
-			realn dt = (NowTime - StartTime) / Duration * dtf;
+			realn dt = 1.0 * (NowTime - StartTime) / Duration * dtf;
 			NowPos = (FunStart + dt - FunStart) * zoom + StartPos;
 		}
+		return *this;
 	}
-	void Animation::Reset() {
+	Animation& Animation::Reset() {
 		NowPos = StartPos;
-		StartTime = clock();
+		StartTime = gclock();
+		return *this;
 	}
-	void Animation::Repeat(bool b, realn delay = 0) {
+	Animation& Animation::Repeat(bool b, int delay = 0) {
 		Repeat_ = b;
 		RepeatDelay = delay;
+		return *this;
 	}
-	void Animation::Return(bool b, realn delay = 0) {
+	Animation& Animation::Return(bool b, int delay = 0) {
 		Return_ = b;
 		if(Returned) {
 			NowPos = TargetPos;
@@ -435,15 +521,19 @@ namespace ggcc {
 			Returned = false;
 		}
 		ReturnDelay = delay;
+		return *this;
 	}
-	void Animation::Stop() {
+	Animation& Animation::Stop() {
 		Update();
 		TargetPos=NowPos;
 		StartPos=NowPos;
+		return *this;
 	}
-	void Animation::Goto(realn pos) {
+	Animation& Animation::Goto(realn pos) {
 		TargetPos=pos;
 		StartPos=pos;
+		StartTime=gclock()-Duration;
+		return *this;
 	}
 
 };

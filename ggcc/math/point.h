@@ -83,10 +83,10 @@ namespace ggcc {
 
 	// 运算符重载
 	bool operator ==(const point2d& a,const point2d& b) {
-		return a.x==b.x&&a.y==b.y;
+		return abs(a.x-b.x)<=0.0000001&&abs(a.y-b.y)<=0.0000001;
 	}
 	bool operator ==(const point3d& a,const point3d& b) {
-		return a.x==b.x&&a.y==b.y&&a.z==b.z;
+		return abs(a.x-b.x)<=0.0000001&&abs(a.y-b.y)<=0.0000001&&abs(a.z-b.z)<=0.0000001;
 	}
 	bool operator ==(const point2d& a,const double& b) {
 		return a.x==0&&a.y==0&&b==0;
@@ -95,10 +95,10 @@ namespace ggcc {
 		return a.x==0&&a.y==0&&a.z==0&&b==0;
 	}
 	bool operator !=(const point2d& a,const point2d& b) {
-		return a.x!=b.x||a.y!=b.y;
+		return !(a==b);
 	}
 	bool operator !=(const point3d& a,const point3d& b) {
-		return a.x!=b.x||a.y!=b.y||a.z!=b.z;
+		return !(a==b);
 	}
 	// 向量加
 	point2d operator +(const point2d& a,const point2d& b) {
@@ -241,6 +241,13 @@ namespace ggcc {
 //		ss.setf(std::ios::fixed);
 		ss.precision(p);
 		ss<<std::setprecision(p)<<"("<<a.x<<","<<a.y<<","<<a.z<<")";
+		return ss.str();
+	}
+	std::string to_string(realn a,int p=2) {
+		std::stringstream ss;
+//		ss.setf(std::ios::fixed);
+		ss.precision(p);
+		ss<<std::setprecision(p)<<a;
 		return ss.str();
 	}
 	realn r2a(realn r) {			// 弧度转角度
