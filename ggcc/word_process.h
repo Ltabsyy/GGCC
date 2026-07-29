@@ -1,8 +1,8 @@
 // word_process.h
 // ggcc文字处理库
 
-#ifndef GGCC_TO_UTF8_H
-#define GGCC_TO_UTF8_H
+#ifndef GGCC_WORD_PROCESS_H
+#define GGCC_WORD_PROCESS_H
 
 #include <bits/stdc++.h>
 
