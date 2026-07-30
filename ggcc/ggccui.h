@@ -16,9 +16,9 @@
 #include <ggcc/word_process.h>
 
 namespace ggcc {
-
+	
 	namespace ui {
-
+		
 		// 重要定义
 		enum Position {
 			pos_full = 0,
@@ -47,7 +47,7 @@ namespace ggcc {
 			operation_delete = 1,
 			operation_swap = 2
 		};
-
+		
 		// 参数
 		int TextHeight = 16;							// 字符高度
 		int UnitHeight = 20;							// 单元格高度
@@ -97,15 +97,17 @@ namespace ggcc {
 		bool InitFinished = false;						// 是否已经初始化
 		realn dpi;										// dpi
 		Animation MouseXAni, MouseYAni;					// 鼠标阴影动画
-
+		
 		// 字体相关定义
 		Font font;										// 字体
 		Font IconFont;									// 图标字体
+		Font EmojiFont;									// Emoji字体
 		std::string FontName = "微软雅黑";				// 字体
 		int CharactorLoadMaximum = 300;					// 最大加载字体长度
 		wp::TextBuffer UseCharacter{"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`1234567890-=~!@#$%^&*()_+[]\\{}|;\':\",./<>?"};
 		wp::TextBuffer UseIcon{" "};
-
+		wp::TextBuffer UseEmoji{" "};
+		
 		// 声明(不全)
 		int Init(int, int, double);						// 初始化
 		void Update();									// 更新
@@ -136,7 +138,7 @@ namespace ggcc {
 		class Priority;									// 优先级处理方法
 		Element* ChooseInputBox = NULL;					// 选择的输入框
 		Slider* ChooseSlider = nullptr;					// 选择的拉动条
-
+		
 		void BeginScissor(float x, float y, float w, float h);
 		void GetScissor(float* x, float* y, float* w, float* h);
 		bool InScissor(float x, float y, float w, float h);
@@ -145,7 +147,7 @@ namespace ggcc {
 		void BeginAlphaMode(realn alpha);
 		void EndAlphaMode();
 		realn GetAlpha();
-
+		
 		// 附属功能
 		// 自动释放函数
 		typedef void (*ReleaseFunc)(Element* ele);
@@ -349,18 +351,20 @@ namespace ggcc {
 			return a.x != b.x || a.y != b.y || a.z != b.z;
 		}
 		bool CompareTime(int y1, int mt1, int d1, int h1, int m1, int s1,
-		                 int y2, int mt2, int d2, int h2, int m2, int s2) {
-			if (y1 > y2)return true;
-			else if (y1 == y2) {
-				if (mt1 > mt2)return true;
-				else if (mt1 == mt2) {
-					if (d1 > d2)return true;
-					else if (d1 == d2) {
-						if (h1 > h2)return true;
-						else if (h1 == h2) {
-							if (m1 > m2)return true;
-							else if (m1 == m2) {
-								if (s1 > s2)return true;
+			int y2, int mt2, int d2, int h2, int m2, int s2) {
+				if (y1 > y2)return true;
+				else if (y1 == y2) {
+					if (mt1 > mt2)return true;
+					else if (mt1 == mt2) {
+						if (d1 > d2)return true;
+						else if (d1 == d2) {
+							if (h1 > h2)return true;
+							else if (h1 == h2) {
+								if (m1 > m2)return true;
+								else if (m1 == m2) {
+									if (s1 > s2)return true;
+									return false;
+								}
 								return false;
 							}
 							return false;
@@ -371,8 +375,6 @@ namespace ggcc {
 				}
 				return false;
 			}
-			return false;
-		}
 		// 坐标转换相关函数
 		vector2d _v(Vector2 v) {
 			return vector2d {v.x, v.y};
@@ -405,20 +407,17 @@ namespace ggcc {
 			UnloadCodepoints(codepoints);
 			UnloadFileData(fontFileData);
 		}
+		void PrintIcon(int x, int y, std::string text, Color color, Font* font, int size);
+		void PrintEmoji(int x, int y, std::string text, Color color, Font* font, int size);
 		void Print(int x, int y, std::string text, Color color = TextColor2) {
 			if (PrintChecking)UseCharacter.Check(text);
-			std::string text2;
-			int j = 0;
-			for (int i = 0; i < text.size(); i++) {
-				if (text[i] == '\t') {
-					int count = 4 - j % 4;
-					if (count == 1)text2 += " ", j += 1;
-					if (count == 2)text2 += "  ", j += 2;
-					if (count == 3)text2 += "   ", j += 3;
-					if (count == 4)text2 += "    ", j += 4;
-				} else text2 += text[i], j++;
+			if (wp::IsIcon(text)) {
+				PrintIcon(x, y, text, color, &IconFont, TextHeight);
+			} else if (wp::IsEmoji(text)) {
+				PrintEmoji(x, y, text, color, &IconFont, TextHeight);
+			} else {
+				DrawTextEx(font, text.c_str(), Vector2 {(float)x, (float)y}, TextHeight, 0, ColorF(color));
 			}
-			DrawTextEx(font, text2.c_str(), Vector2 {(float)x, (float)y}, TextHeight, 0, ColorF(color));
 		}
 		void Print_Format(int x, int y, std::string text, int startx = 0, Color color = TextColor2) {
 			if (PrintChecking)UseCharacter.Check(text);
@@ -432,6 +431,9 @@ namespace ggcc {
 					if (count == 3)text2 += "   ", j += 3;
 					if (count == 4)text2 += "    ", j += 4;
 				} else text2 += text[i], j++;
+			}
+			if (wp::IsIcon(text)) {
+				PrintIcon(x, y, text, color, &IconFont, TextHeight);
 			}
 			DrawTextEx(font, text2.c_str(), Vector2 {(float)x, (float)y}, TextHeight, 0, ColorF(color));
 		}
@@ -556,6 +558,10 @@ namespace ggcc {
 			if (PrintChecking)UseIcon.Check(text);
 			DrawTextEx((*font), text.c_str(), Vector2 {(float)x, (float)y}, size, 0, ColorF(color));
 		}
+		void PrintEmoji(int x, int y, std::string text, Color color = ui::TextColor, Font* font = &EmojiFont, int size = ui::TextHeight) {
+			if (PrintChecking)UseEmoji.Check(text);
+			DrawTextEx((*font), text.c_str(), Vector2 {(float)x, (float)y}, size, 0, ColorF(color));
+		}
 		bool MouseInRect(realn x1, realn y1, realn w, realn h) {
 			realn x2 = x1 + w, y2 = y1 + h;
 			if (Mouse.x >= x1 && Mouse.x < x2 && Mouse.y >= y1 && Mouse.y < y2)return true;
@@ -566,7 +572,7 @@ namespace ggcc {
 			if (dx * dx + dy * dy <= r * r)return true;
 			return false;
 		}
-
+		
 		// 代码高亮功能
 		namespace highlight {
 			
@@ -591,15 +597,15 @@ namespace ggcc {
 			};
 			
 			Color color_one_dark[17] = {
-				Color{255, 255, 255, 255},	//编辑器默认
-				Color{255, 255, 255, 255},	//行号
-				Color{255, 255, 255, 255},	//当前行号
+				Color{171, 178, 191, 255},	//编辑器默认
+				Color{ 73,  81,  98, 255},	//行号
+				Color{171, 178, 191, 255},	//当前行号
 				Color{127, 132, 142, 255},	//注释
 				Color{171, 178, 191, 255},	//符号
 				Color{152, 195, 121, 255},	//1级括括号
 				Color{209, 154, 102, 255},	//2级括括号
 				Color{198, 120, 221, 255},	//3级括括号
-				Color{ 86, 182, 192, 255},	//4级括括号
+				Color{ 86, 182, 194, 255},	//4级括括号
 				Color{209, 154, 102, 255},	//数字
 				Color{198, 120, 221, 255},	//预处理指令
 				Color{152, 195, 121, 255},	//字符
@@ -609,16 +615,91 @@ namespace ggcc {
 				Color{ 97, 175, 239, 255},	//函数
 				Color{224, 108, 117, 255}	//变量
 			};
+			Color color_molo_codeblack[17] = {
+				Color{255, 255, 255, 255},	//编辑器默认
+				Color{150, 150, 150, 255},	//行号
+				Color{  0, 217, 217, 255},	//当前行号
+				Color{105, 152,  86, 255},	//注释
+				Color{255, 125, 138, 255},	//符号
+				Color{255, 105, 105, 255},	//1级括括号
+				Color{255, 230,   0, 255},	//2级括括号
+				Color{226, 108, 255, 255},	//3级括括号
+				Color{  0, 128, 255, 255},	//4级括括号
+				Color{235, 235, 235, 255},	//数字
+				Color{230, 159, 238, 255},	//预处理指令
+				Color{181, 206, 168, 255},	//字符
+				Color{251, 142,  98, 255},	//字符串
+				Color{255, 238,  55, 255},	//转义序列0x06
+				Color{171, 144, 255, 255},	//关键字
+				Color{238, 238, 149, 255},	//函数
+				Color{ 85, 195, 254, 255}	//变量
+			};
+			Color color_vs_modern_dark[17] = {
+				Color{255, 255, 255, 255},	//编辑器默认
+				Color{ 60,  60,  60, 255},	//行号
+				Color{204, 204, 204, 255},	//当前行号
+				Color{106, 152,  85, 255},	//注释
+				Color{212, 212, 212, 255},	//符号
+				Color{212, 212, 212, 255},	//1级括括号
+				Color{255, 230,   0, 255},	//2级括括号
+				Color{218, 112, 214, 255},	//3级括括号
+				Color{ 23, 159, 255, 255},	//4级括括号
+				Color{181, 206, 168, 255},	//数字
+				Color{197, 134, 192, 255},	//预处理指令
+				Color{206, 145, 120, 255},	//字符
+				Color{206, 145, 120, 255},	//字符串
+				Color{215, 186, 125, 255},	//转义序列0x06
+				Color{197, 134, 192, 255},	//关键字
+				Color{220, 220, 170, 255},	//函数
+				Color{156, 220, 254, 255}	//变量
+			};
+			Color color_monokai_pro[17] = {
+				Color{252, 252, 250, 255},	//编辑器默认
+				Color{ 91,  89,  92, 255},	//行号
+				Color{193, 192, 192, 255},	//当前行号
+				Color{114, 112, 114, 255},	//注释
+				Color{255,  97, 136, 255},	//符号
+				Color{169, 220, 118, 255},	//1级括括号
+				Color{255,  97, 136, 255},	//2级括括号
+				Color{252, 152, 103, 255},	//3级括括号
+				Color{255, 216, 102, 255},	//4级括括号
+				Color{171, 157, 242, 255},	//数字
+				Color{255,  97, 136, 255},	//预处理指令
+				Color{255, 216, 102, 255},	//字符
+				Color{255, 216, 102, 255},	//字符串
+				Color{171, 157, 242, 255},	//转义序列0x06
+				Color{120, 220, 232, 255},	//关键字
+				Color{169, 220, 118, 255},	//函数
+				Color{252, 252, 250, 255}	//变量
+			};
 			
-			std::string Theme = "One Dark";	// 当前配色
+			std::string ThemeName = "One Dark";	// 当前配色
+			int ThemeID = 1;					// 当前配色编号
 			
+			// 设置配色方案
+			void SetColorTheme(std::string theme) {
+				ThemeName = theme;
+				if (theme == "One Dark")ThemeID = 1;
+				if (theme == "MoLo CodeBlack")ThemeID = 2;
+				if (theme == "VS Modern Dark")ThemeID = 3;
+				if (theme == "Monokai Pro")ThemeID = 4;
+			}
 			// 根据当前配色获取颜色
 			Color GetColor(int type) {
-				if(Theme == "One Dark")return color_one_dark[type];
+				if (ThemeID == 1)return color_one_dark[type];
+				if (ThemeID == 2)return color_molo_codeblack[type];
+				if (ThemeID == 3)return color_vs_modern_dark[type];
+				if (ThemeID == 4)return color_monokai_pro[type];
+			}
+			// 根据当前配色获取背景色
+			Color GetBgColor() {
+				if (ThemeID == 1)return Color {40, 44, 52, 255};
+				if (ThemeID == 2)return Color {15, 15, 15, 255};
+				if (ThemeID == 3)return Color {31, 31, 31, 255};
+				if (ThemeID == 4)return Color {45, 42, 46, 255};
 			}
 			
-			int FindReservedWord(std::vector<std::string>& content,std::vector<std::vector<Type> >& type, int r1, int c1)
-			{
+			int FindReservedWord(std::vector<std::string>& content, std::vector<std::vector<Type> >& type, int r1, int c1) {
 				static char* word[48] = {
 					// C语言33关键字
 					"auto", "break", "case", "char", "const",
@@ -636,20 +717,16 @@ namespace ggcc {
 					"def", "from", "import", "in"
 				};
 				int i, j;
-				for(i=0; i<48; i++)//在所有关键字中比较
-				{
-					for(j=0; word[i][j]!=0; j++)
-					{
-						if(c1+j < content[r1].size() && content[r1][c1+j] == word[i][j]);
+				for (i = 0; i < 48; i++) { //在所有关键字中比较
+					for (j = 0; word[i][j] != 0; j++) {
+						if (c1 + j < content[r1].size() && content[r1][c1 + j] == word[i][j]);
 						else break;
 					}
-					if(word[i][j] == 0)
-					{
-						if(c1+j < content[r1].size() && ((content[r1][c1+j] >= '0' && content[r1][c1+j] <= '9')
-							|| (content[r1][c1+j] >= 'A' && content[r1][c1+j] <= 'Z')
-							|| (content[r1][c1+j] >= 'a' && content[r1][c1+j] <= 'z')
-							|| content[r1][c1+j] == '_'))
-						{
+					if (word[i][j] == 0) {
+						if (c1 + j < content[r1].size() && ((content[r1][c1 + j] >= '0' && content[r1][c1 + j] <= '9')
+							|| (content[r1][c1 + j] >= 'A' && content[r1][c1 + j] <= 'Z')
+							|| (content[r1][c1 + j] >= 'a' && content[r1][c1 + j] <= 'z')
+							|| content[r1][c1 + j] == '_')) {
 							continue;
 						}
 						return j;
@@ -658,19 +735,16 @@ namespace ggcc {
 				return 0;//返回匹配关键字字符数
 			}
 			
-			void AnalysisColor(std::vector<std::string>& content, std::vector<std::vector<Type> >& type)
-			{
+			void AnalysisColor(std::vector<std::string>& content, std::vector<std::vector<Type> >& type) {
 				int r, c, start, end;
 				int bLevel = 0;
 				
-				if(content.size()==0)return;
-				if(content.size()==1&&content[0].size()==0)return;
+				if (content.size() == 0)return;
+				if (content.size() == 1 && content[0].size() == 0)return;
 				
 				//符号着色
-				for(r=0; r<content.size(); r++)
-				{
-					for(c=0; c<content[r].size(); c++)
-					{
+				for (r = 0; r < content.size(); r++) {
+					for (c = 0; c < content[r].size(); c++) {
 						/*----------------
 						ASCII:
 						0-8:    控制码
@@ -690,73 +764,57 @@ namespace ggcc {
 						127:    退格符
 						----------------*/
 						//33-47除"#$'，58-64除@，91-96除\_`，123-126
-						if((content[r][c] >= 'a' && content[r][c] <= 'z')
+						if ((content[r][c] >= 'a' && content[r][c] <= 'z')
 							|| (content[r][c] >= 'A' && content[r][c] <= 'Z')
-							|| content[r][c] <= ' ')//对于大多数字母，不进行后续比较
-						{
+							|| content[r][c] <= ' ') { //对于大多数字母，不进行后续比较
 							type[r][c] = Type_Default;
 						}
 						/*else if(content[r][c] >= '0' && content[r][c] <= '9')
 					{
 						type[r][c] = Type_Number;
 						}*/
-						else if((content[r][c] >= '(' && content[r][c] <= '/')
+						else if ((content[r][c] >= '(' && content[r][c] <= '/')
 							|| (content[r][c] >= ':' && content[r][c] <= '?')
 							|| (content[r][c] >= '{' && content[r][c] <= '~')
 							|| content[r][c] == '!' || content[r][c] == '%' || content[r][c] == '&'
 							|| content[r][c] == '[' || content[r][c] == ']'
-							|| content[r][c] == '^')//优先比较常见字符以加速
-						{
+							|| content[r][c] == '^') { //优先比较常见字符以加速
 							type[r][c] = Type_Symbol;
-						}
-						else
-						{
+						} else {
 							type[r][c] = Type_Default;
 						}
 					}
 				}
 				//数字着色
-				for(r=0; r<content.size(); r++)
-				{
-					for(c=0; c<content[r].size(); c++)
-					{
-						if(content[r][c] >= '0' && content[r][c] <= '9')
-						{
-							if(c > 0) {
-								if( ((content[r][c-1] >= 'A' && content[r][c-1] <= 'Z')
-								|| (content[r][c-1] >= 'a' && content[r][c-1] <= 'z')
-								|| content[r][c-1] == '_'))continue;
+				for (r = 0; r < content.size(); r++) {
+					for (c = 0; c < content[r].size(); c++) {
+						if (content[r][c] >= '0' && content[r][c] <= '9') {
+							if (c > 0) {
+								if ( ((content[r][c - 1] >= 'A' && content[r][c - 1] <= 'Z')
+									|| (content[r][c - 1] >= 'a' && content[r][c - 1] <= 'z')
+									|| content[r][c - 1] == '_'))continue;
 							}
 							type[r][c] = Type_Number;
 						}
-						if(content[r][c] == '.' && c > 0 && c+1 < content[r].size())//小数点
-						{
-							if(content[r][c-1] >= '0' && content[r][c-1] <= '9'
-								&& content[r][c+1] >= '0' && content[r][c+1] <= '9')
-							{
+						if (content[r][c] == '.' && c > 0 && c + 1 < content[r].size()) { //小数点
+							if (content[r][c - 1] >= '0' && content[r][c - 1] <= '9'
+								&& content[r][c + 1] >= '0' && content[r][c + 1] <= '9') {
 								type[r][c] = Type_Number;
 							}
 						}
-						if(content[r][c] == '0' && c+1 < content[r].size())//十六进制数
-						{
-							if(content[r][c+1] == 'x') {
-								if(c+2 < content[r].size())
-								{
-									if((content[r][c+2] >= '0' && content[r][c+2] <= '9')
-										|| (content[r][c+2] >= 'A' && content[r][c+2] <= 'F')
-										|| (content[r][c+2] >= 'a' && content[r][c+2] <= 'f'))
-									{
-										type[r][c+1] = Type_Number;
-										for(c+=2; c<content[r].size(); c++)
-										{
-											if((content[r][c] >= '0' && content[r][c] <= '9')
+						if (content[r][c] == '0' && c + 1 < content[r].size()) { //十六进制数
+							if (content[r][c + 1] == 'x') {
+								if (c + 2 < content[r].size()) {
+									if ((content[r][c + 2] >= '0' && content[r][c + 2] <= '9')
+										|| (content[r][c + 2] >= 'A' && content[r][c + 2] <= 'F')
+										|| (content[r][c + 2] >= 'a' && content[r][c + 2] <= 'f')) {
+										type[r][c + 1] = Type_Number;
+										for (c += 2; c < content[r].size(); c++) {
+											if ((content[r][c] >= '0' && content[r][c] <= '9')
 												|| (content[r][c] >= 'A' && content[r][c] <= 'F')
-												|| (content[r][c] >= 'a' && content[r][c] <= 'f'))
-											{
+												|| (content[r][c] >= 'a' && content[r][c] <= 'f')) {
 												type[r][c] = Type_Number;
-											}
-											else
-											{
+											} else {
 												break;
 											}
 										}
@@ -767,63 +825,46 @@ namespace ggcc {
 					}
 				}
 				//预处理指令着色
-				for(r=0; r<content.size(); r++)
-				{
-					if(content[r].size() > 0 && content[r][0] == '#')
-					{
-						for(c=0; c<content[r].size(); c++)
-						{
-							if(content[r][c] == '<') break;
+				for (r = 0; r < content.size(); r++) {
+					if (content[r].size() > 0 && content[r][0] == '#') {
+						for (c = 0; c < content[r].size(); c++) {
+							if (content[r][c] == '<') break;
 							type[r][c] = Type_Preprocessor;
 						}
 					}//行首为#且在<前的内容
 				}
 				//注释着色
 				start = 0;
-				for(r=0; r<content.size(); r++)
-				{
-					for(c=0; c<(int)content[r].size()-1; c++)
-					{
-						if(content[r][c] == '/' && content[r][c+1] == '*')
-						{
+				for (r = 0; r < content.size(); r++) {
+					for (c = 0; c < (int)content[r].size() - 1; c++) {
+						if (content[r][c] == '/' && content[r][c + 1] == '*') {
 							start = 1;
 						}
-						if(start == 1)
-						{
+						if (start == 1) {
 							type[r][c] = Type_Comment;
 						}
-						if(content[r][c] == '*' && content[r][c+1] == '/')
-						{
+						if (content[r][c] == '*' && content[r][c + 1] == '/') {
 							start = 0;
-							type[r][c+1] = Type_Comment;
+							type[r][c + 1] = Type_Comment;
 						}
 					}
-					for(c=0; c<(int)content[r].size()-1; c++)
-					{
-						if(content[r][c] == '/' && content[r][c+1] == '/')
-						{
-							for(; c<content[r].size(); c++)
-							{
+					for (c = 0; c < (int)content[r].size() - 1; c++) {
+						if (content[r][c] == '/' && content[r][c + 1] == '/') {
+							for (; c < content[r].size(); c++) {
 								type[r][c] = Type_Comment;
 							}
 						}
 					}
 				}
 				//字符和字符串着色
-				for(r=0; r<content.size(); r++)
-				{
-					for(c=0; c<content[r].size(); c++)
-					{
-						if(content[r][c] == '\'')
-						{
+				for (r = 0; r < content.size(); r++) {
+					for (c = 0; c < content[r].size(); c++) {
+						if (content[r][c] == '\'') {
 							start = c;
 							end = -1;
-							for(c++; c<content[r].size(); c++)
-							{
-								if(content[r][c] == '\'' && type[r][c] == Type_Default)
-								{
-									if(content[r][c-1] == '\\' && c-2 >= 0 && content[r][c-2] != '\\')
-									{
+							for (c++; c < content[r].size(); c++) {
+								if (content[r][c] == '\'' && type[r][c] == Type_Default) {
+									if (content[r][c - 1] == '\\' && c - 2 >= 0 && content[r][c - 2] != '\\') {
 										continue;//判断'\''和'\\'
 									}
 									end = c;
@@ -831,29 +872,22 @@ namespace ggcc {
 								}
 							}
 							c = start;
-							if(end != -1)
-							{
-								for(; c<=end; c++)
-								{
+							if (end != -1) {
+								for (; c <= end; c++) {
 									type[r][c] = Type_Character;
 								}
 								c--;
 							}
 						}
 					}
-					for(c=0; c<content[r].size(); c++)
-					{
-						if(content[r][c] == '"')
-						{
+					for (c = 0; c < content[r].size(); c++) {
+						if (content[r][c] == '"') {
 							start = c;
 							end = -1;
-							for(c++; c<content[r].size(); c++)
-							{
-								if(content[r][c] == '"' && type[r][c] == Type_Default)
-								{
-									if(c-1>=0&&c-2>=0) {
-										if(content[r][c-1] == '\\' && content[r][c-2] != '\\')
-										{
+							for (c++; c < content[r].size(); c++) {
+								if (content[r][c] == '"' && type[r][c] == Type_Default) {
+									if (c - 1 >= 0 && c - 2 >= 0) {
+										if (content[r][c - 1] == '\\' && content[r][c - 2] != '\\') {
 											continue;//判断"\""和"\\"
 										}
 									}
@@ -862,61 +896,49 @@ namespace ggcc {
 								}
 							}
 							c = start;
-							if(end != -1)
-							{
+							if (end != -1) {
 								start = c;
-								for(; c<=end; c++)
-								{
+								for (; c <= end; c++) {
 									type[r][c] = Type_String;
 								}
 								c = start;
 								//转义序列着色
-								for(c++; c<end; c++)
-								{
-									if(content[r][c] == '\\')
-									{
-										if(content[r][c+1] == '\''
-											|| content[r][c+1] == '"'
-											|| content[r][c+1] == '?'
-											|| content[r][c+1] == '\\'
-											|| content[r][c+1] == 'a'
-											|| content[r][c+1] == 'b'
-											|| content[r][c+1] == 'f'
-											|| content[r][c+1] == 'n'
-											|| content[r][c+1] == 'r'
-											|| content[r][c+1] == 't'
-											|| content[r][c+1] == 'v')
-										{
+								for (c++; c < end; c++) {
+									if (content[r][c] == '\\') {
+										if (content[r][c + 1] == '\''
+											|| content[r][c + 1] == '"'
+											|| content[r][c + 1] == '?'
+											|| content[r][c + 1] == '\\'
+											|| content[r][c + 1] == 'a'
+											|| content[r][c + 1] == 'b'
+											|| content[r][c + 1] == 'f'
+											|| content[r][c + 1] == 'n'
+											|| content[r][c + 1] == 'r'
+											|| content[r][c + 1] == 't'
+											|| content[r][c + 1] == 'v') {
 											type[r][c] = Type_EscapeSequences;
-											type[r][c+1] = Type_EscapeSequences;
+											type[r][c + 1] = Type_EscapeSequences;
 											c++;
-										}
-										else if(content[r][c+1] >= '0' && content[r][c+1] <= '7' && c+3 < end
-											&& content[r][c+2] >= '0' && content[r][c+2] <= '7'
-											&& content[r][c+3] >= '0' && content[r][c+3] <= '7')
-										{
+										} else if (content[r][c + 1] >= '0' && content[r][c + 1] <= '7' && c + 3 < end
+											&& content[r][c + 2] >= '0' && content[r][c + 2] <= '7'
+											&& content[r][c + 3] >= '0' && content[r][c + 3] <= '7') {
 											type[r][c] = Type_EscapeSequences;
-											type[r][c+1] = Type_EscapeSequences;
-											type[r][c+2] = Type_EscapeSequences;
-											type[r][c+3] = Type_EscapeSequences;
+											type[r][c + 1] = Type_EscapeSequences;
+											type[r][c + 2] = Type_EscapeSequences;
+											type[r][c + 3] = Type_EscapeSequences;
 											c += 3;
-										}
-										else if(content[r][c+1] == '0')
-										{
+										} else if (content[r][c + 1] == '0') {
 											type[r][c] = Type_EscapeSequences;
-											type[r][c+1] = Type_EscapeSequences;
+											type[r][c + 1] = Type_EscapeSequences;
 											c++;
-										}
-										else if(content[r][c+1] == 'x')
-										{
+										} else if (content[r][c + 1] == 'x') {
 											type[r][c] = Type_EscapeSequences;
-											type[r][c+1] = Type_EscapeSequences;
+											type[r][c + 1] = Type_EscapeSequences;
 											c++;
-											while((content[r][c+1] >= '0' && content[r][c+1] <= '9')
-												|| (content[r][c+1] >= 'A' && content[r][c+1] <= 'F')
-												|| (content[r][c+1] >= 'a' && content[r][c+1] <= 'f'))
-											{
-												type[r][c+1] = Type_EscapeSequences;
+											while ((content[r][c + 1] >= '0' && content[r][c + 1] <= '9')
+												|| (content[r][c + 1] >= 'A' && content[r][c + 1] <= 'F')
+												|| (content[r][c + 1] >= 'a' && content[r][c + 1] <= 'f')) {
+												type[r][c + 1] = Type_EscapeSequences;
 												c++;
 											}
 										}
@@ -928,26 +950,20 @@ namespace ggcc {
 					}
 				}
 				//彩虹括号着色
-				for(r=0; r<content.size(); r++)
-				{
-					for(c=0; c<content[r].size(); c++)
-					{
-						if(type[r][c] == Type_Symbol)
-						{
-							if(content[r][c] == '(' || content[r][c] == ')'
+				for (r = 0; r < content.size(); r++) {
+					for (c = 0; c < content[r].size(); c++) {
+						if (type[r][c] == Type_Symbol) {
+							if (content[r][c] == '(' || content[r][c] == ')'
 								|| content[r][c] == '[' || content[r][c] == ']'
-								|| content[r][c] == '{' || content[r][c] == '}')
-							{
-								if(content[r][c] == '(' || content[r][c] == '[' || content[r][c] == '{')
-								{
+								|| content[r][c] == '{' || content[r][c] == '}') {
+								if (content[r][c] == '(' || content[r][c] == '[' || content[r][c] == '{') {
 									bLevel++;
 								}
-								if(bLevel % 4 == 0) type[r][c] = Type_Bracket_L1;
-								else if(bLevel % 4 == 1) type[r][c] = Type_Bracket_L2;//保持底层为L2
-								else if(bLevel % 4 == 2) type[r][c] = Type_Bracket_L3;
-								else if(bLevel % 4 == 3) type[r][c] = Type_Bracket_L4;
-								if(content[r][c] == ')' || content[r][c] == ']' || content[r][c] == '}')
-								{
+								if (bLevel % 4 == 0) type[r][c] = Type_Bracket_L1;
+								else if (bLevel % 4 == 1) type[r][c] = Type_Bracket_L2; //保持底层为L2
+								else if (bLevel % 4 == 2) type[r][c] = Type_Bracket_L3;
+								else if (bLevel % 4 == 3) type[r][c] = Type_Bracket_L4;
+								if (content[r][c] == ')' || content[r][c] == ']' || content[r][c] == '}') {
 									bLevel--;
 								}
 							}
@@ -955,21 +971,16 @@ namespace ggcc {
 					}
 				}
 				//关键字着色
-				for(r=0; r<content.size(); r++)
-				{
-					for(c=0; c<content[r].size(); c++)
-					{
-						if(c > 0 && ((content[r][c-1] >= '0' && content[r][c-1] <= '9')
-							|| (content[r][c-1] >= 'A' && content[r][c-1] <= 'Z')
-							|| (content[r][c-1] >= 'a' && content[r][c-1] <= 'z')
-							|| content[r][c-1] == '_'));
-						else if(type[r][c] == Type_Default)//仅搜索未着色部分
-						{
+				for (r = 0; r < content.size(); r++) {
+					for (c = 0; c < content[r].size(); c++) {
+						if (c > 0 && ((content[r][c - 1] >= '0' && content[r][c - 1] <= '9')
+							|| (content[r][c - 1] >= 'A' && content[r][c - 1] <= 'Z')
+							|| (content[r][c - 1] >= 'a' && content[r][c - 1] <= 'z')
+							|| content[r][c - 1] == '_'));
+						else if (type[r][c] == Type_Default) { //仅搜索未着色部分
 							end = FindReservedWord(content, type, r, c);
-							if(end > 0)
-							{
-								for(start=c; c<=start+end-1; c++)
-								{
+							if (end > 0) {
+								for (start = c; c <= start + end - 1; c++) {
 									type[r][c] = Type_ReservedWord;
 								}
 								c--;
@@ -978,23 +989,16 @@ namespace ggcc {
 					}
 				}
 				//函数着色
-				for(r=0; r<content.size(); r++)
-				{
-					for(c=0; c<(int)content[r].size()-1; c++)
-					{
-						if(type[r][c] == Type_Default && content[r][c+1] == '(')
-						{
-							for(end=c; c>=0; c--)//(前为函数
-							{
-								if((content[r][c] >= '0' && content[r][c] <= '9')
+				for (r = 0; r < content.size(); r++) {
+					for (c = 0; c < (int)content[r].size() - 1; c++) {
+						if (type[r][c] == Type_Default && content[r][c + 1] == '(') {
+							for (end = c; c >= 0; c--) { //(前为函数
+								if ((content[r][c] >= '0' && content[r][c] <= '9')
 									|| (content[r][c] >= 'A' && content[r][c] <= 'Z')
 									|| (content[r][c] >= 'a' && content[r][c] <= 'z')
-									|| content[r][c] == '_')
-								{
+									|| content[r][c] == '_') {
 									type[r][c] = Type_Function;
-								}
-								else
-								{
+								} else {
 									break;
 								}
 							}
@@ -1003,12 +1007,9 @@ namespace ggcc {
 					}
 				}
 				//剩余内容均视为变量
-				for(r=0; r<content.size(); r++)
-				{
-					for(c=0; c<content[r].size(); c++)
-					{
-						if(type[r][c] == Type_Default)
-						{
+				for (r = 0; r < content.size(); r++) {
+					for (c = 0; c < content[r].size(); c++) {
+						if (type[r][c] == Type_Default) {
 							type[r][c] = Type_Variable;
 						}
 					}
@@ -1290,7 +1291,7 @@ namespace ggcc {
 				}
 			}
 		};
-
+		
 		// 实现
 		class System {
 		public:
@@ -1303,7 +1304,7 @@ namespace ggcc {
 			}
 			void Erase(Priority* w);
 		} MainSystem;
-
+		
 		// 侧边栏处理类
 		class Sider {
 		public:
@@ -1341,9 +1342,9 @@ namespace ggcc {
 			}
 			SiderManager& EraseSider(Element* ele_) {
 				for (int i = 0; i < sider.size(); i++)if (sider[i].ele == ele_) {
-						sider[i].rlf(sider[i].ele);
-						sider.erase(sider.begin() + i);
-					}
+					sider[i].rlf(sider[i].ele);
+					sider.erase(sider.begin() + i);
+				}
 				return *this;
 			}
 			SiderManager& InsertSider(int id, Element* ele, SiderPosition spos = ui::spos_top, ReleaseFunc fun = nullptr) {
@@ -1360,7 +1361,7 @@ namespace ggcc {
 			}
 			int Draw(int, int, int, int, bool);
 		};
-
+		
 		// 控件基类
 		class Element {
 		private:
@@ -1429,7 +1430,7 @@ namespace ggcc {
 			int GetHeight() {
 				if (!init_height) {
 					BeginScissor(0, 0, 0, 0);
-					height = Draw(10, 10, winW*2);
+					height = Draw(10, 10, winW * 2);
 					EndScissor();
 					init_height = true;
 				}
@@ -1482,7 +1483,7 @@ namespace ggcc {
 			std::cout << "[#] [Delete] " << ele << std::endl;
 			ele = nullptr;
 		}
-
+		
 		int SiderManager::Draw(int x, int y, int w, int h, bool check = true) {
 			int dx = 0, dy = 0, dw = 0, dh = 0;
 			for (int i = 0; i < sider.size(); i++) {
@@ -1510,7 +1511,7 @@ namespace ggcc {
 			X = x + dx, Y = y + dy, W = w + dw, H = h + dh;
 			return h;
 		}
-
+		
 		// 优先级处理类
 		double TopPriority = 0;
 		double WindowTopPriority = 0;
@@ -1521,7 +1522,7 @@ namespace ggcc {
 			double priority;									// 优先级
 			std::string prio_flag = "Window";					// 优先级控件类型
 			ReleaseFunc rlf = nullptr;							// 自动释放函数
-
+			
 			Priority() {
 				priority = ++TopPriority;
 				prio_flag = "Window";
@@ -1537,9 +1538,9 @@ namespace ggcc {
 			int GetTopPriority() {
 				return TopPriority;
 			}
-
+			
 		};
-
+		
 		// 一下为继承的控件
 		class SliderBar : public Element {
 		private:
@@ -1557,6 +1558,9 @@ namespace ggcc {
 			Animation move;					// 滚动动画
 			int cursor_pos = 0;				// 光标位置
 			bool draw_cursor = false;		// 是否显示光标位置
+			bool draw_background = true;	// 是否绘制背景
+			Color SliderBgColor = ColorF(27, 27, 27, 255);// 背景色
+			
 		public:
 			static realn ani_fun(realn x) {
 				return exp(-x);
@@ -1575,8 +1579,7 @@ namespace ggcc {
 			}
 			SliderBar& Shift(int x) {
 				move.update();
-				move.ssp(x);
-				move.stp(x);
+				move.gt(x);
 				return *this;
 			}
 			SliderBar& GotoTop() {
@@ -1590,11 +1593,22 @@ namespace ggcc {
 			int Now() {
 				return now;
 			}
+			int Target() {
+				return move.gtp();
+			}
 			int Sum() {
 				return sum;
 			}
 			SliderBar& SetControl(int x, int y, int w, int h) {
 				lx = x, ly = y, lw = w, lh = h;
+				return *this;
+			}
+			SliderBar& SetBgColor(Color color) {
+				SliderBgColor = color;
+				return *this;
+			}
+			SliderBar& SetDrawBackground(bool on) {
+				draw_background = on;
 				return *this;
 			}
 			SliderBar& SetBlank(realn blank_) {
@@ -1647,7 +1661,7 @@ namespace ggcc {
 					if (h >= sum2) {
 						if (fixed) {
 							// 绘制整体
-							DrawRectangle(x, y, w, h, ColorF(27, 27, 27, 255));
+							if (draw_background)DrawRectangle(x, y, w, h, SliderBgColor);
 							// 绘制箭头
 							DrawLine(x + w / 2, y + w * 3 / 8, x + w / 4, y + w * 5 / 8, ColorF(WHITE));
 							DrawLine(x + w / 2, y + w * 3 / 8, x + w * 3  / 4, y + w * 5 / 8, ColorF(WHITE));
@@ -1657,7 +1671,7 @@ namespace ggcc {
 						} else return SliderWidth;
 					}
 					// 绘制整体
-					DrawRectangle(x, y, w, h, ColorF(27, 27, 27, 255));
+					if (draw_background)DrawRectangle(x, y, w, h, SliderBgColor);
 					// 绘制箭头
 					DrawLine(x + w / 2, y + w * 3 / 8, x + w / 4, y + w * 5 / 8, ColorF(WHITE));
 					DrawLine(x + w / 2, y + w * 3 / 8, x + w * 3  / 4, y + w * 5 / 8, ColorF(WHITE));
@@ -1667,6 +1681,7 @@ namespace ggcc {
 					double k = 1.0 * now / sum2;
 					double k2 = 1.0 * h / sum2;
 					double h2 = 0;
+					if (choose) k = 1.0 * move.gtp() / sum2;
 					if (k2 * (h - 2 * w) < w)h2 = (w - k2 * (h - 2 * w)), k2 = 1.0 * w / (h - 2 * w - h2);
 					if (choose)DrawRectangle(x, y + k * (h - w * 2 - h2) + w, w, k2 * (h - 2 * w - h2), ColorF(158, 158, 157, 255));
 					else if (MouseInRect(x, y + k * (h - w * 2 - h2) + w, w, k2 * (h - 2 * w - h2)))
@@ -1705,7 +1720,7 @@ namespace ggcc {
 					sum2 += w * blank;
 					if (w >= sum2) {
 						if (fixed) {
-							DrawRectangle(x, y, w, h, ColorF(27, 27, 27, 255));
+							if (draw_background)DrawRectangle(x, y, w, h, SliderBgColor);
 							DrawLine(x + h * 3 / 8, y + h / 2, x + h * 5 / 8, y + h / 4, ColorF(WHITE));
 							DrawLine(x + h * 3 / 8, y + h / 2, x + h * 5 / 8, y + h * 3 / 4, ColorF(WHITE));
 							DrawLine(x + w - h * 3 / 8, y + h / 2, x + w - h * 5 / 8, y + h / 4, ColorF(WHITE));
@@ -1713,7 +1728,7 @@ namespace ggcc {
 							return SliderWidth;
 						} else return SliderWidth;
 					}
-					DrawRectangle(x, y, w, h, ColorF(27, 27, 27, 255));
+					if (draw_background)DrawRectangle(x, y, w, h, SliderBgColor);
 					DrawLine(x + h * 3 / 8, y + h / 2, x + h * 5 / 8, y + h / 4, ColorF(WHITE));
 					DrawLine(x + h * 3 / 8, y + h / 2, x + h * 5 / 8, y + h * 3 / 4, ColorF(WHITE));
 					DrawLine(x + w - h * 3 / 8, y + h / 2, x + w - h * 5 / 8, y + h / 4, ColorF(WHITE));
@@ -1721,6 +1736,7 @@ namespace ggcc {
 					double k = 1.0 * now / sum2;
 					double k2 = 1.0 * w / sum2;
 					double w2 = 0;
+					if (choose) k = 1.0 * move.gtp() / sum2;
 					if (k2 * (w - 2 * h) < h)w2 = (h - k2 * (w - 2 * h)), k2 = 1.0 * h / (w - 2 * h - w2);
 					if (choose)DrawRectangle(x + k * (w - h * 2 - w2) + h, y, k2 * (w - 2 * h - w2), h, ColorF(158, 158, 157, 255));
 					else if (MouseInRect(x + k * (w - h * 2 - w2) + h, y, k2 * (w - 2 * h - w2), h))
@@ -1762,14 +1778,14 @@ namespace ggcc {
 			bool movable = true;
 			bool moving = false;
 			SplitStyle split_style = split_main;
-
+			
 			~Layout() {
 				delete lo1;
 				delete lo2;
 				lo1 = nullptr;
 				lo2 = nullptr;
 			}
-
+			
 			bool IsMoving() {
 				return moving;
 			}
@@ -2501,7 +2517,7 @@ namespace ggcc {
 				if (id >= 0)return appearAni.GetPos(gclock() - id * 50);
 				else return appearAni.GetPos((gclock() - appearAni.gst()) / 2 + appearAni.gst() + id * 50);
 			}
-
+			
 		public:
 			bool draw_background = true;
 			bool draw_menu_background = false;
@@ -2636,7 +2652,7 @@ namespace ggcc {
 			std::map <vector2d*, std::pair<Animation, Animation> > v2ani;
 			std::map <vector2d*, bool> v2state;
 			std::function<void(GraphDebugger*)> draw_fun;
-
+			
 			bool mesh_visible = true;
 			bool axis_visible = true;
 			bool zoom_visible = true;
@@ -2645,7 +2661,7 @@ namespace ggcc {
 			bool mesh_limit = false;
 			realn move_threshold_dist = 5 * ui::dpi;
 			realn move_threshold_time = 0.3;
-
+			
 			GraphDebugger(std::function<void(GraphDebugger*)> DrawFun = nullptr) {
 				zoom_ani.sd(300);
 				zoom_ani.ssp(2);
@@ -2724,7 +2740,7 @@ namespace ggcc {
 			bool MousePressed(MouseButton mb) {
 				return IsMouseButtonPressed(mb) && !mouse_move && CHECK && MouseInRect(X, Y, W, H);
 			}
-
+			
 			void DrawMesh_(realn sspace, Color color, bool num = false) {
 				vector2d O = W2S({0, 0});
 				realn x = X, y = Y, w = W, h = H;
@@ -3272,7 +3288,7 @@ namespace ggcc {
 				draw_line(shape->pos, shape->pos + vector2d{0, 0.3}.Rotate(shape->rotate));
 				draw_point_controlled(&shape->pos, color);
 			}
-
+			
 			vector2d last_mouse_pos{0, 0};
 			int Draw(int x, int y, int w, int h, bool check = true) {
 				X = x, Y = y, W = w, H = h, CHECK = check;
@@ -3285,7 +3301,7 @@ namespace ggcc {
 				realn sspace = wspace * zoom;
 				float_point = false;
 				vector2d O = W2S({0, 0});
-
+				
 				if (movable) {
 					if (MouseInRect(x, y, w, h))UseSliderX = UseSliderY = true;
 					if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
@@ -3307,7 +3323,7 @@ namespace ggcc {
 					else mouse_move = false;
 					if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !IsMouseButtonDown(MOUSE_BUTTON_RIGHT))last_mouse_pos = _v(Mouse);
 				} else mouse_move = false;
-
+				
 				if (mesh_visible) {
 					if (sspace / 10.0 > 10 * dpi) {
 						realn a = (sspace / 10 - 10 * dpi) / (20.0 * dpi);
@@ -3370,16 +3386,16 @@ namespace ggcc {
 				return a - floor(a);
 			}
 			realn window_scale = 1;
-
+			
 		public:
 			Camera3D camera = { 0 };
 			void (*draw_fun)(GraphDebugger3D*) = nullptr;
-
+			
 			bool axis_visible = true;
 			bool zoom_visible = true;
 			bool mesh_visible = true;
 			bool movable = true;
-
+			
 			GraphDebugger3D() {
 				extra = true;
 				// 初始化摄像机
@@ -3524,7 +3540,7 @@ namespace ggcc {
 //					dir2=VecUnit(dir2-(dir2>>dp));
 					vector3d temp = dp ^ (dir1.Rotate(dp, t * angle));
 					temp = VecUnit(temp);
-
+					
 					draw_line(l, p, c2);
 					draw_line(l1, p + temp * radius, color);
 					draw_line(l2, p - temp * radius, color);
@@ -3538,13 +3554,13 @@ namespace ggcc {
 				}
 //				draw_vector(v4,dir2*radius);
 			}
-
+			
 			int Draw(int x, int y, int w, int h, bool check = true) {
 				BeginMode3D(camera);
 				UpdateCamera(&camera, CAMERA_ORBITAL);
 				double k = pow(10, round(log10(abs(camera.position.y)))), k01 = k / 10.0;
 				if (k < 1)k = 1, k01 = k / 10;
-
+				
 				realn temp = 1.0 * winH / winW;
 				float x2, y2, w2, h2;
 				GetScissor(&x2, &y2, &w2, &h2);
@@ -3556,7 +3572,7 @@ namespace ggcc {
 					rlViewport(x, winH - (y - (w * temp - h) / 2) - w * temp, w, w * temp);
 					window_scale = 1.0 * w / winW;
 				}
-
+				
 				if (movable) {
 					if (MouseInRect(x, y, w, h))UseSliderX = UseSliderY = true;
 				}
@@ -3568,13 +3584,13 @@ namespace ggcc {
 							int z2 = ceil(j + camera.position.z / k01);
 							realn x = x2 * k01, z = z2 * k01;
 							realn distance = sqrtf((x - camera.position.x) * (x - camera.position.x) + (z - camera.position.z) * (z - camera.position.z));
-
+							
 							// 根据距离设置线段的颜色
 							if (1.0f - distance * 0.03f / abs(camera.position.y) * 10 < 0)continue;
 							Color lineColor = (Color) {
 								150, 150, 150, 255 * ((1 - f(log10(abs(camera.position.y)) - 0.5)))*(1.0f - distance * 0.03f / abs(camera.position.y) * 10)
 							};
-
+							
 							// 绘制线段
 							if (x2 % 10 != 0)DrawLine3D((Vector3) {
 								x, 0.0f, z
@@ -3595,13 +3611,13 @@ namespace ggcc {
 							int z2 = ceil(j + camera.position.z / k);
 							realn x = x2 * k, z = z2 * k;
 							float distance = sqrtf((x - camera.position.x) * (x - camera.position.x) + (z - camera.position.z) * (z - camera.position.z));
-
+							
 							// 根据距离设置线段的颜色
 							if (1.0f - distance * 0.03f / abs(camera.position.y) * 9 < 0)continue;
 							Color lineColor = (Color) {
 								150, 150, 150, 255 * (1.0f - distance * 0.03f / abs(camera.position.y) * 9)
 							};
-
+							
 							// 绘制线段
 							if (x2 != 0)DrawLine3D((Vector3) {
 								x, 0.0f, z
@@ -3634,7 +3650,7 @@ namespace ggcc {
 					}, Color{255, 128, 192, 255});
 				}
 				if (draw_fun != nullptr)draw_fun(this);
-
+				
 				EndMode3D();
 				rlViewport(0, 0, winW, winH);
 				if (x != x2 || y != y2 || w != w2 || h != h2)EndScissor();
@@ -3646,7 +3662,7 @@ namespace ggcc {
 				special_effect::DrawMouseBox(x, y, w, w * 0.8);
 				return w * 0.8 + dpi * 2;
 			}
-
+			
 		};
 		struct InputHistory {
 			InputBoxOperation op = operation_insert;
@@ -3677,10 +3693,10 @@ namespace ggcc {
 			int start_pos = 0;
 			bool choose = false;
 			bool chosen = false;
-
+			
 			bool input_enable = true;
 			bool auto_complete = true;
-
+			
 			InputBox() {
 				ipa.sd(200);
 				spa.sd(400);
@@ -3712,7 +3728,7 @@ namespace ggcc {
 				}
 				str = str2;
 				input.insert(pos, str);
-
+				
 				InputHistory temp_history;
 				temp_history.op = operation_insert;
 				temp_history.pos1 = vector2d(pos, 0);
@@ -3728,7 +3744,7 @@ namespace ggcc {
 						history.push(temp2);
 					} else history.push(temp_history);
 				}
-
+				
 				return pos + str.size();
 			}
 			int InsertBack(std::string str) {
@@ -3742,7 +3758,7 @@ namespace ggcc {
 				if (pos1 > pos2)std::swap(pos1, pos2);
 				std::string backup = Copy(pos1, pos2);
 				input.erase(pos1, pos2 - pos1);
-
+				
 				InputHistory temp_history;
 				temp_history.op = operation_delete;
 				temp_history.pos1 = vector2d(pos1, 0);
@@ -3758,7 +3774,7 @@ namespace ggcc {
 						history.push(temp2);
 					} else history.push(temp_history);
 				}
-
+				
 				return pos1;
 			}
 			int GetEnd() {
@@ -3882,9 +3898,9 @@ namespace ggcc {
 						if (input_enable) {
 							bool flag = false;
 							for (int i = 32; i <= 127; i++)if (c == i) {
-									flag = true;
-									break;
-								}
+								flag = true;
+								break;
+							}
 							if (IsKeyDown(KEY_BACKSPACE) || IsKeyDown(KEY_ENTER) || IsKeyDown(KEY_TAB) || IsKeyDown(KEY_DELETE))flag = true;
 							if (flag) {
 								input_pos = Delete(choose_pos, input_pos);
@@ -3927,8 +3943,12 @@ namespace ggcc {
 									input_pos = Delete(choose_pos, input_pos);
 									choose_word_on = false;
 								}
-								std::string str = GetClipboardText();
-								input_pos = Insert(input_pos, str);
+								try {
+									std::string str = GetClipboardText();
+									input_pos = Insert(input_pos, str);
+								} catch (...) {
+									ui::message::Send("[CRASH #001] ", 500000, ColorF(255, 100, 100));
+								}
 							}
 							if (ui::IsKeyInput(KEY_Z)) {
 								choose_word_on = false;
@@ -3994,9 +4014,10 @@ namespace ggcc {
 			bool choose_minimap = false;			// 是否选择小地图
 			int choose_minimap_delta = 0;			// 我也不知道这是干啥的
 			vector2d choose_pos = {0, 0};			// 选择起始点
+			vector2d choose_pos1 = {0, 0};			// 选择起始点
 			vector2d choose_pos2 = {0, 0};			// 选择终止点
 			Animation ipx, ipy;						// 光标行、列位置动画
-
+			
 		public:
 			std::vector<std::string> input;			// 文本
 			vector2d input_pos = {0, 0};			// 光标位置
@@ -4008,7 +4029,7 @@ namespace ggcc {
 			Color background_color = BgColor;		// 背景色
 			std::vector<std::vector<highlight::Type> > color;// 代码高亮
 			ui::SliderBar sx, sy;					// 横向、纵向滚动条
-
+			
 			bool label_visible = false;				// 是否显示行号
 			bool auto_complete = true;				// 是否使用自动补全
 			bool minimap_visible = false;			// 是否显示小地图
@@ -4017,12 +4038,14 @@ namespace ggcc {
 			bool input_enable = true;				// 是否可以输入
 			bool space_visible = false;				// 是否显示空白字符
 			bool tabline_visible = false;			// 是否显示缩进提示线
+			bool statebar_visible = false;			// 是否显示状态栏
+			bool shadow_visible = false;			// 是否显示小地图、行号栏的阴影
 			int minimap_width = 100 * dpi;			// 小地图宽度
-
+			
 			std::stack<InputHistory> history;		// 操作历史（用于撤销）
 			std::stack<InputHistory> history2;		// 撤销历史（用于重做）
 			int last_history_len = -1;				// 我也不知道这是干啥的
-
+			
 			MultiInputBox() {
 				ipx.sd(200), ipy.sd(200);
 				extra = true;
@@ -4098,7 +4121,7 @@ namespace ggcc {
 				}
 				input[pos.y].insert(pos.x, str2), pos.x += str2.size();
 				input[pos.y] += temp_str;
-
+				
 				InputHistory temp_history;
 				temp_history.op = operation_insert;
 				temp_history.pos1 = backup_pos;
@@ -4114,7 +4137,7 @@ namespace ggcc {
 						history.push(temp2);
 					} else history.push(temp_history);
 				}
-
+				
 				return pos;
 			}
 			vector2d InsertBack(std::string str) {
@@ -4147,7 +4170,7 @@ namespace ggcc {
 				} else {
 					input[v1.y].erase(v1.x, v2.x - v1.x);
 				}
-
+				
 				InputHistory temp_history;
 				temp_history.op = operation_delete;
 				temp_history.pos1 = v1;
@@ -4163,7 +4186,7 @@ namespace ggcc {
 						history.push(temp2);
 					} else history.push(temp_history);
 				}
-
+				
 				return v1;
 			}
 			vector2d Delete(vector2d pos, int n) {
@@ -4242,7 +4265,7 @@ namespace ggcc {
 			}
 			bool InText(vector2d pos, vector2d p1, vector2d p2) {
 				if (p1.y > p2.y)std::swap(p1, p2);
-				else if (p1.y == p2.y && p1.x > p2.y)std::swap(p1, p2);
+				else if (p1.y == p2.y && p1.x > p2.x)std::swap(p1, p2);
 				if (pos.y < p1.y)return false;
 				if (pos.y > p2.y)return false;
 				if (pos.y == p1.y && pos.x < p1.x)return false;
@@ -4265,9 +4288,9 @@ namespace ggcc {
 				fw.close();
 			}
 			int Draw(int x, int y, int w, int h, bool check = true) {
-
+				
 				BeginScissor(x, y, w, h);
-
+				
 				// 更新动画
 				ipx.stp(wp::Index2Cursor(input, input_pos.y, input_pos.x)), ipy.stp(input_pos.y);
 				ipx.update(), ipy.update();
@@ -4282,16 +4305,21 @@ namespace ggcc {
 				int end_y = (sy.Now() - ui::SpaceSize + h) / ui::UnitHeight + 1;
 				// 绘制背景色
 				if (background_color.r != BgColor.r ||
-				    background_color.g != BgColor.g ||
-				    background_color.b != BgColor.b)DrawRectangle(x, y, w, h, ColorF(background_color));
+					background_color.g != BgColor.g ||
+					background_color.b != BgColor.b)DrawRectangle(x, y, w, h, ColorF(background_color));
 				int tempW = 0;
 				// 绘制行号
 				if (label_visible) {
 					tempW = ui::TextHeight * 4;
-					DrawRectangle(x, y, tempW, h, ColorF(25, 25, 25, 255));
 					int tempH = (ui::UnitHeight - ui::TextHeight) / 2;
 					int tempx = x - sx.Now() + ui::SpaceSize;
 					int tempy = y - sy.Now() + ui::SpaceSize;
+					// 绘制高亮行
+					if (highlight_visible) {
+						if (minimap_visible)DrawRectangle(x + ui::SpaceSize, tempy + ui::UnitHeight * ipy.gnp(), w - ui::SpaceSize - minimap_width, ui::UnitHeight, ColorF(100, 100, 100, 100));
+						else DrawRectangle(x + ui::SpaceSize, tempy + ui::UnitHeight * ipy.gnp(), w - ui::SpaceSize, ui::UnitHeight, ColorF(100, 100, 100, 100));
+					}
+					// 绘制行号数字
 					for (int i = start_y; i < std::min((int)input.size(), end_y); i++) {
 						size.x = std::max(size.x, (realn)input[i].size());
 						std::string temp_str = "";
@@ -4299,12 +4327,8 @@ namespace ggcc {
 						std::stringstream a;
 						a << (i + 1);
 						temp_str += a.str();
-						ui::Print(x + ui::TextHeight * 0.5, tempy + tempH + i * ui::UnitHeight, temp_str, WHITE);
-					}
-					// 绘制高亮行
-					if (highlight_visible) {
-						if (minimap_visible)DrawRectangle(x + ui::SpaceSize, tempy + ui::UnitHeight * ipy.gnp(), w - ui::SpaceSize - minimap_width, ui::UnitHeight, ColorF(100, 100, 100, 100));
-						else DrawRectangle(x + ui::SpaceSize, tempy + ui::UnitHeight * ipy.gnp(), w - ui::SpaceSize, ui::UnitHeight, ColorF(100, 100, 100, 100));
+						if (i == input_pos.y)ui::Print(x + ui::TextHeight * 0.5, tempy + tempH + i * ui::UnitHeight, temp_str, highlight::GetColor(highlight::Type_Gutter_AL));
+						else ui::Print(x + ui::TextHeight * 0.5, tempy + tempH + i * ui::UnitHeight, temp_str, highlight::GetColor(highlight::Type_Gutter));
 					}
 					x += tempW;
 					w -= tempW;
@@ -4317,6 +4341,15 @@ namespace ggcc {
 						if (minimap_visible)DrawRectangle(x, tempy + ui::UnitHeight * ipy.gnp(), w - minimap_width, ui::UnitHeight, ColorF(100, 100, 100, 100));
 						else DrawRectangle(x, tempy + ui::UnitHeight * ipy.gnp(), w, ui::UnitHeight, ColorF(100, 100, 100, 100));
 					}
+				}
+				// 绘制状态栏
+				if (statebar_visible) {
+					int tempH = (ui::UnitHeight - ui::TextHeight) / 2;
+					h -= UnitHeight;
+					DrawRectangle(x - tempW, y + h, w + tempW, UnitHeight, ColorF(background_color));
+					Print(x - tempW + SpaceSize, y + h + tempH,
+						"INSERT MODE, Line " + wp::tostr((int)input_pos.y + 1) + ", Column " + wp::tostr((int)input_pos.x),
+						highlight::GetColor(highlight::Type_Default));
 				}
 				// 计算文本裁剪区
 				int tempH = (ui::UnitHeight - ui::TextHeight) / 2;
@@ -4408,7 +4441,7 @@ namespace ggcc {
 							// 绘制起止光标间的阴影
 							vector2d v1, v2;
 							choose_pos2 = vector2d(ipx.gnp(), ipy.gnp());
-							vector2d choose_pos1 = vector2d(wp::Index2Cursor(input, choose_pos.y, choose_pos.x), choose_pos.y);
+							choose_pos1 = vector2d(wp::Index2Cursor(input, choose_pos.y, choose_pos.x), choose_pos.y);
 							if (abs(input_pos1.y - ipy.gnp()) == 0 && abs(input_pos1.x - ipx.gnp()) > 10)choose_pos2.x = input_pos1.x;
 							if (abs(input_pos1.y - ipy.gnp()) > 5)choose_pos2.y = input_pos1.y, choose_pos2.x = input_pos1.x;
 							if (choose_pos1.y < choose_pos2.y)v1 = choose_pos1, v2 = choose_pos2;
@@ -4428,15 +4461,15 @@ namespace ggcc {
 							}
 							// 绘制起止光标
 							DrawRectangle(
-							    tempx + ui::TextHeight / 2 * choose_pos1.x - ui::dpi,
-							    tempy + ui::UnitHeight * choose_pos1.y - tempH,
-							    2 * ui::dpi, ui::TextHeight + tempH * 4, ColorF(ThemeColor)
-							);
+								tempx + ui::TextHeight / 2 * choose_pos1.x - ui::dpi,
+								tempy + ui::UnitHeight * choose_pos1.y - tempH,
+								2 * ui::dpi, ui::TextHeight + tempH * 4, ColorF(ThemeColor)
+								);
 							DrawRectangle(
-							    tempx + ui::TextHeight / 2 * choose_pos2.x - ui::dpi,
-							    tempy + ui::UnitHeight * choose_pos2.y - tempH,
-							    2 * ui::dpi, ui::TextHeight + tempH * 4, ColorF(ThemeColor)
-							);
+								tempx + ui::TextHeight / 2 * choose_pos2.x - ui::dpi,
+								tempy + ui::UnitHeight * choose_pos2.y - tempH,
+								2 * ui::dpi, ui::TextHeight + tempH * 4, ColorF(ThemeColor)
+								);
 							// 判断是否通过一些按键取消选择
 							if (IsKeyDown(KEY_HOME) || IsKeyDown(KEY_END) || IsKeyDown(KEY_UP) || IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_RIGHT)) {
 								choose_word_on = false;
@@ -4444,9 +4477,9 @@ namespace ggcc {
 							if (input_enable) {
 								bool flag = false;
 								for (int i = 32; i <= 127; i++)if (c == i) {
-										flag = true;
-										break;
-									}
+									flag = true;
+									break;
+								}
 								if (IsKeyDown(KEY_BACKSPACE) || IsKeyDown(KEY_ENTER) || IsKeyDown(KEY_TAB) || IsKeyDown(KEY_DELETE))flag = true;
 								if (flag) {
 									input_pos = Delete(choose_pos, input_pos);
@@ -4464,11 +4497,13 @@ namespace ggcc {
 								if (input_pos.x < input[input_pos.y].size())input_pos = Delete(input_pos + vector2d{wp::GetNextCharacter(input, input_pos.y, input_pos.x), 0}, input_pos);
 								else if (input_pos.y < input.size() - 1)input_pos = Delete({0, input_pos.y + 1}, input_pos);
 							} else if (ui::IsKeyInput(KEY_LEFT)) {
-								if (input_pos.x > 0)input_pos.x -= wp::GetPreCharacter(input, input_pos.y, input_pos.x);
-								else if (input_pos.y > 0)input_pos.y--, input_pos.x = input[input_pos.y].size();
+								if (input_pos.x > 0) {
+									if (ipy.gnp() == input_pos.y)input_pos.x -= wp::GetPreCharacter(input, input_pos.y, input_pos.x);
+								} else if (input_pos.y > 0 && !ipx.is_run())input_pos.y--, input_pos.x = input[input_pos.y].size();
 							} else if (ui::IsKeyInput(KEY_RIGHT)) {
-								if (input_pos.x < input[input_pos.y].size())input_pos.x += wp::GetNextCharacter(input, input_pos.y, input_pos.x);
-								else if (input_pos.y < input.size() - 1)input_pos.y++, input_pos.x = 0;
+								if (input_pos.x < input[input_pos.y].size()) {
+									if (ipy.gnp() == input_pos.y)input_pos.x += wp::GetNextCharacter(input, input_pos.y, input_pos.x);
+								} else if (input_pos.y < input.size() - 1 && !ipx.is_run())input_pos.y++, input_pos.x = 0;
 							} else if (ui::IsKeyInput(KEY_UP) && input_pos.y > 0) {
 								if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyDown(KEY_LEFT_SHIFT)) {
 									SwapLine(input_pos.y, input_pos.y - 1);
@@ -4545,8 +4580,12 @@ namespace ggcc {
 										input_pos = Delete(choose_pos, input_pos);
 										choose_word_on = false;
 									}
-									std::string str = GetClipboardText();
-									input_pos = Insert(input_pos, str);
+									try {
+										std::string str = GetClipboardText();
+										input_pos = Insert(input_pos, str);
+									} catch (...) {
+										ui::message::Send("[CRASH #001] ", 500000, ColorF(255, 100, 100));
+									}
 								}
 								if (ui::IsKeyInput(KEY_E)) {
 									choose_word_on = false;
@@ -4588,9 +4627,9 @@ namespace ggcc {
 						// 判断是否有按键事件或鼠标点击，如果有，则通过光标移动视野
 						bool flag = false;
 						for (int i = 1; i <= 350; i++)if (IsKeyDown(i)) {
-								flag = true;
-								break;
-							}
+							flag = true;
+							break;
+						}
 						if (flag || ipx.IsRunning() || ipy.IsRunning() || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
 							a = 200, fix_time = gclock();
 							if (input_pos1.x * ui::TextHeight / 2 < sx.Now())sx.Set(input_pos1.x * ui::TextHeight / 2);
@@ -4638,12 +4677,13 @@ namespace ggcc {
 							Print(tempx + count2 * ui::TextHeight / 2, tempy + tempH + i * ui::UnitHeight, char2str, highlight::GetColor(color[i][j2]));
 						}
 					}
+					background_color = highlight::GetBgColor();
 				}
 				if (input.size() == 1 && input[0].size() == 0) {
 					Print(tempx, tempy + tempH, text, GRAY);
 				}
 				// 绘制空白字符
-				if (space_visible || choose_word_on) {
+				if (space_visible || (choose_word_on && ChooseInputBox == this)) {
 					for (int i = start_y; i < std::min((int)input.size(), end_y); i++) {
 						int count = 0;
 						for (int j = 0; j < input[i].size(); j++) {
@@ -4656,9 +4696,9 @@ namespace ggcc {
 							else count++;
 							if (choose_word_on && !InText(vector2d(j, i), choose_pos, choose_pos2))continue;
 							if (input[i][j] == '\t')DrawLineEx(
-								    Vector2{tempx + tcount * TextHeight / 2, tempy + i*UnitHeight + UnitHeight / 2},
-								    Vector2{tempx + count * TextHeight / 2 - dpi, tempy + i*UnitHeight + UnitHeight / 2},
-								    dpi, ColorF(DARKGRAY)
+								Vector2{tempx + tcount * TextHeight / 2, tempy + i*UnitHeight + UnitHeight / 2},
+								Vector2{tempx + count * TextHeight / 2 - dpi, tempy + i*UnitHeight + UnitHeight / 2},
+								dpi, ColorF(DARKGRAY)
 								);
 							if (input[i][j] == ' ')DrawCircle(tempx + count * TextHeight / 2 - TextHeight / 4, tempy + i * UnitHeight + UnitHeight / 2, dpi, DARKGRAY);
 						}
@@ -4668,10 +4708,15 @@ namespace ggcc {
 				if (tabline_visible) {
 					for (int i = start_y; i < std::min((int)input.size(), end_y); i++) {
 						for (int j = 0; j < input[i].size(); j++) {
+							Color tlc;
+							if (j % 4 == 3)tlc = highlight::GetColor(highlight::Type_Bracket_L1);
+							if (j % 4 == 0)tlc = highlight::GetColor(highlight::Type_Bracket_L2);
+							if (j % 4 == 1)tlc = highlight::GetColor(highlight::Type_Bracket_L3);
+							if (j % 4 == 2)tlc = highlight::GetColor(highlight::Type_Bracket_L4);
 							if (input[i][j] == '\t')DrawLineEx(
-								    Vector2{tempx + j*TextHeight * 2, tempy + i*UnitHeight},
-								    Vector2{tempx + j*TextHeight * 2, tempy + i*UnitHeight + UnitHeight},
-								    dpi, MainColor
+								Vector2{tempx + j*TextHeight * 2, tempy + i*UnitHeight},
+								Vector2{tempx + j*TextHeight * 2, tempy + i*UnitHeight + UnitHeight},
+								dpi, ColorF(tlc,0.3)
 								);
 							else break;
 						}
@@ -4682,37 +4727,41 @@ namespace ggcc {
 					// 焦点状态，黄色
 					a = a * 255 / 200;
 					if (!choose_word_on)DrawRectangle(
-						    tempx + TextHeight / 2 * ipx.gnp() - ui::dpi,
-						    tempy + UnitHeight * ipy.gnp() - tempH,
-						    2 * dpi, TextHeight + tempH * 4, ColorF(232, 192, 114, a)
+						tempx + TextHeight / 2 * ipx.gnp() - ui::dpi,
+						tempy + UnitHeight * ipy.gnp() - tempH,
+						2 * dpi, TextHeight + tempH * 4, ColorF(232, 192, 114, a)
 						);
 				} else {
 					// 非焦点，灰色
 					DrawRectangle(
-					    tempx + ui::TextHeight / 2 * ipx.gnp() - ui::dpi,
-					    tempy + ui::UnitHeight * ipy.gnp() - tempH,
-					    2 * ui::dpi, ui::TextHeight + tempH * 4, ColorF(70, 70, 70, 255)
-					);
+						tempx + ui::TextHeight / 2 * ipx.gnp() - ui::dpi,
+						tempy + ui::UnitHeight * ipy.gnp() - tempH,
+						2 * ui::dpi, ui::TextHeight + tempH * 4, ColorF(70, 70, 70, 255)
+						);
 				}
 				// 绘制行号栏的阴影
-				if (label_visible) {
+				if (label_visible && shadow_visible) {
 					if (sx.Now() > ui::SpaceSize - 1) {
 						int delta = sx.Now() - ui::SpaceSize + 1;
 						if (delta > ui::UnitHeight * 2)delta = ui::UnitHeight * 2;
 						ui::special_effect::DrawShadowLine(x, y + h, x, y, 10 * ui::dpi, 1.0 * delta / ui::UnitHeight / 2);
 					}
 				}
-
+				
 				ui::EndScissor();
 				// 绘制小地图
 				if (minimap_visible) {
-					realn temp = 1.0 * sy.Now() / sy.Sum() * (1 - h * 3 * dpi / UnitHeight / h);
-					realn start = 1.0 * sy.Now() / ui::UnitHeight - temp * h / dpi / 3;
+					int nowy = sy.Now();
+					if (choose_minimap)nowy = sy.Target();
+					realn temp = 1.0 * nowy / sy.Sum() * (1 - h * 3 * dpi / UnitHeight / h);
+					realn start = 1.0 * nowy / ui::UnitHeight - temp * h / dpi / 3;
 					int delta_y = start * dpi * 3;
 					if (start < 0)start = 0;
 					Color tcolor;
+					// 绘制内容
 					for (int i = start; i < std::min((int)input.size(), int(start + h / 3 / dpi)); i++) {
 						int p1 = 0, count = 0;
+						// 绘制文本
 						for (int j = 0; j < input[i].size(); j++) {
 							if (input[i][j] == '\t')count = floor(count / 4.0) * 4 + 4;
 							else if ((input[i][j] & 0xF8) == 0xF8)j += 4, count += 2;
@@ -4724,48 +4773,62 @@ namespace ggcc {
 								if (color_scheme_enable)tcolor = ColorF(MixColor(highlight::GetColor(color[i][j]), ui::BgColor, 0.5));
 								else tcolor = ColorF(GRAY);
 							} else tcolor = BgColor;
+							// 选择的文本得有阴影
 							if (choose_word_on) {
-								if (InText(vector2d(j, i), choose_pos, choose_pos2))tcolor = ColorF(MixColor(tcolor, MainColor, 0.5));
-								if (vector2d(j, i) == choose_pos || vector2d(j, i) == choose_pos2)tcolor = ColorF(ThemeColor);
+								if (InText(vector2d(j, i), choose_pos1, choose_pos2))tcolor = ColorF(MixColor(tcolor, MainColor, 0.5));
+								if (vector2d(j, i) == choose_pos1 || vector2d(j, i) == choose_pos2)tcolor = ColorF(ThemeColor);
 							}
 							if (tcolor != BgColor)DrawRectangle(x + w - minimap_width + count * dpi, y + i * dpi * 3 - delta_y, dpi, dpi * 2, tcolor);
 							if (j * dpi > minimap_width) break;
 						}
 					}
-					DrawRectangle(x + w - minimap_width, y + sy.Now() * dpi * 3 / UnitHeight - delta_y, minimap_width, h * 3 * dpi / UnitHeight, ColorF(ChooseColor));
-					if (size.x * ui::TextHeight / 2 - sx.Now() > w - minimap_width) {
+					// 绘制当前行高亮
+					if (highlight_visible) {
+						DrawRectangle(x + w - minimap_width, y + ipy.gnp() * dpi * 3 - delta_y, minimap_width, dpi * 2, ColorF(LIGHTGRAY,0.5));
+					}
+					// 绘制当前位置
+					DrawRectangle(x + w - minimap_width, y + nowy * dpi * 3 / UnitHeight - delta_y, minimap_width, h * 3 * dpi / UnitHeight, ColorF(ChooseColor));
+					// 绘制小地图阴影
+					if (size.x * ui::TextHeight / 2 - sx.Now() > w - minimap_width && shadow_visible) {
 						int delta = size.x * ui::TextHeight / 2 - sx.Now() - w + minimap_width;
 						if (delta > ui::UnitHeight * 2)delta = ui::UnitHeight * 2;
 						ui::special_effect::DrawShadowLine(x + w - minimap_width, y, x + w - minimap_width, y + h, 10 * ui::dpi, 1.0 * delta / ui::UnitHeight / 2);
 					}
+					// 检测按键
 					if (check && MouseInRect(x + w - minimap_width, y, minimap_width - ui::SpaceSize * 3, h - ui::SpaceSize * 3)) {
-						if (MouseInRect(x + w - minimap_width, y + sy.Now() * dpi * 3 / UnitHeight - delta_y, minimap_width, h * 3 * dpi / UnitHeight)) {
-							DrawRectangle(x + w - minimap_width, y + sy.Now() * dpi * 3 / UnitHeight - delta_y, minimap_width, h * 3 * dpi / UnitHeight, ColorF(ChooseColor));
+						// 悬浮时加深颜色
+						if (MouseInRect(x + w - minimap_width, y + nowy * dpi * 3 / UnitHeight - delta_y, minimap_width, h * 3 * dpi / UnitHeight) || choose_minimap) {
+							DrawRectangle(x + w - minimap_width, y + nowy * dpi * 3 / UnitHeight - delta_y, minimap_width, h * 3 * dpi / UnitHeight, ColorF(ChooseColor));
 						}
 						if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-							if (MouseInRect(x + w - minimap_width, y + sy.Now() * dpi * 3 / UnitHeight - delta_y, minimap_width, h * 3.0 * dpi / UnitHeight)) {
-								realn k = ((Mouse.y - (y + sy.Now() * dpi * 3.0 / UnitHeight - delta_y + h * 3.0 * dpi / UnitHeight / 2))) / h;
+							if (MouseInRect(x + w - minimap_width, y + nowy * dpi * 3 / UnitHeight - delta_y, minimap_width, h * 3.0 * dpi / UnitHeight)) {
+								// 拖动
+								realn k = ((Mouse.y - (y + nowy * dpi * 3.0 / UnitHeight - delta_y + h * 3.0 * dpi / UnitHeight / 2))) / h;
 								choose_minimap = true;
-								choose_minimap_delta = k * (sy.Now() * (1 + (h * 3.0 * dpi / UnitHeight) / (h - h * 3.0 * dpi / UnitHeight)));
+								choose_minimap_delta = k * (nowy * (1 + (h * 3.0 * dpi / UnitHeight) / (h - h * 3.0 * dpi / UnitHeight)));
 							} else {
+								// 跳转
 								realn k = (Mouse.y - h * 3.0 * dpi / UnitHeight / 2 - y) / h;
-								sy.Set(k * (sy.Now() * (1 + (h * 3.0 * dpi / UnitHeight) / (h - h * 3.0 * dpi / UnitHeight))));
+								sy.Set(k * (nowy * (1 + (h * 3.0 * dpi / UnitHeight) / (h - h * 3.0 * dpi / UnitHeight))));
 								choose_minimap = true;
 								choose_minimap_delta = 0;
 							}
 						}
 					}
+					// 拖动时加深颜色
 					if (choose_minimap) {
-						DrawRectangle(x + w - minimap_width, y + sy.Now() * dpi * 3.0 / UnitHeight - delta_y, minimap_width, h * 3.0 * dpi / UnitHeight, ColorF(ChooseColor));
+						DrawRectangle(x + w - minimap_width, y + nowy * dpi * 3.0 / UnitHeight - delta_y, minimap_width, h * 3.0 * dpi / UnitHeight, ColorF(ChooseColor));
 						realn k = (Mouse.y - h * 3.0 * dpi / UnitHeight / 2 - y) / h;
 						sy.Set(k * (sy.Sum() * (1 + (h * 3.0 * dpi / UnitHeight) / (h - h * 3.0 * dpi / UnitHeight))) - choose_minimap_delta);
 					}
 					if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT))choose_minimap = false;
 				}
-
+				
 				// 绘制滚动条
 				sx.SetFixed(true);
 				sy.SetFixed(true);
+				sx.SetDrawBackground(false);
+				sy.SetDrawBackground(false);
 				sx.SetSum(size.x * ui::TextHeight / 2 + SliderWidth + tempW + minimap_width * minimap_visible);
 				sy.SetSum(size.y * ui::UnitHeight + h - ui::UnitHeight - SliderWidth);
 				sy.SetDrawCursor(true);
@@ -4775,7 +4838,7 @@ namespace ggcc {
 				sx.Update();
 				sy.Update();
 				DrawRectangle(x + w - SliderWidth, y + h - SliderWidth, SliderWidth, SliderWidth, ColorF(DARKGRAY));
-
+				
 				// 结束
 				EndScissor();
 				return ui::UnitHeight;
@@ -4813,7 +4876,7 @@ namespace ggcc {
 					tickAni.stp(0);
 					aAni.stp(0);
 				}
-				if(draw_box_background) {
+				if (draw_box_background) {
 					if (aAni.gnp() != 1)DrawRectangle(x, y + h, TextHeight, TextHeight, ColorF(20, 20, 20, 100));
 					if (aAni.gnp() != 0)DrawRectangle(x, y + h, TextHeight, TextHeight, ColorF(MainColor, aAni.gnp()));
 					special_effect::DrawMouseRectangle(x, y + h, TextHeight, TextHeight);
@@ -4891,7 +4954,7 @@ namespace ggcc {
 			int* ptr = nullptr;
 			int DrawOne(int id, int x, int y, int w, bool check = true) {
 				int h = (UnitHeight - TextHeight) / 2;
-				if(draw_box_background) {
+				if (draw_box_background) {
 					DrawCircle(x + TextHeight / 2, y + h + TextHeight / 2, TextHeight / 2, ColorF(20, 20, 20, 255));
 					DrawRing({x + TextHeight / 2, y + h + TextHeight / 2}, std::min(TextHeight / 2 - int(choose_ani[id].gnp()*TextHeight / 3.0), TextHeight / 2), TextHeight / 2, 0, 360, 30,  ColorF(MainColor));
 					special_effect::DrawMouseCircle(x + TextHeight / 2, y + h + TextHeight / 2, TextHeight / 2);
@@ -4914,7 +4977,7 @@ namespace ggcc {
 			int choose = -1;
 			bool draw_box_background = true;
 			RadioBox(std::vector<std::string> rtext_, int* ptr_ = nullptr) {
-				for(int i=0;i<rtext_.size();i++)AddOption(rtext_[i]);
+				for (int i = 0; i < rtext_.size(); i++)AddOption(rtext_[i]);
 				ptr = ptr_;
 			}
 			RadioBox() {}
@@ -4976,7 +5039,7 @@ namespace ggcc {
 				return *this;
 			}
 			Pulldown& AddButton(std::string icon, std::string text) {
-				ColorText* temp = new ColorText(icon,text);
+				ColorText* temp = new ColorText(icon, text);
 				Add(temp, auto_release);
 				type.resize(Size());
 				type[type.size() - 1] = 1;
@@ -5007,7 +5070,7 @@ namespace ggcc {
 				type.resize(Size());
 				type[type.size() - 1] = 2;
 				menu.resize(type.size());
-				menu[menu.size()-1] = temp;
+				menu[menu.size() - 1] = temp;
 				return *this;
 			}
 			Pulldown& Open(Vector2 pos_) {
@@ -5018,8 +5081,8 @@ namespace ggcc {
 				pop = true;
 				SetTopPriority();
 			}
-			Pulldown& Open(int x,int y) {
-				Open(Vector2{x,y});
+			Pulldown& Open(int x, int y) {
+				Open(Vector2{x, y});
 			}
 			Pulldown& Close() {
 				wani.stp(0).sd(300).sms(anif::classics_r);
@@ -5027,37 +5090,37 @@ namespace ggcc {
 				open = false;
 			}
 			Pulldown& ChangeState(Vector2 pos_) {
-				if(pop)return Close();
+				if (pop)return Close();
 				return Open(pos_);
 			}
-			Pulldown& ChangeState(int x,int y) {
-				return ChangeState(Vector2{x,y});
+			Pulldown& ChangeState(int x, int y) {
+				return ChangeState(Vector2{x, y});
 			}
 			Pulldown& SetPos(Vector2 pos_) {
 				pos = pos_;
 			}
-			Pulldown& SetPos(int x,int y) {
+			Pulldown& SetPos(int x, int y) {
 				pos.x = x;
 				pos.y = y;
 			}
 			int Draw(int x, int y, int w, int h, bool check) {
 				// 判断是否收起
-				if(!open&&wani.gnp()==0) {
-					pop=false;
+				if (!open && wani.gnp() == 0) {
+					pop = false;
 					width = wp::strLen(text) * TextHeight / 2 + TextHeight + SpaceSize * 3 + TextHeight / 2;
 					return h;
 				}
 				x = pos.x, y = pos.y;
-				if(priority!=GetTopPriority()||(!MouseInRect(x,y,wani.gnp(),hani.gnp())&&IsMouseButtonPressed(MOUSE_BUTTON_LEFT))) {
-					bool flag=false;
-					for(int i=0;i<menu.size();i++) {
-						if(!menu[i])continue;
-						if(menu[i]->appearAni.gnp()>0.7||menu[i]->open) {
-							flag=true;
+				if (priority != GetTopPriority() || (!MouseInRect(x, y, wani.gnp(), hani.gnp()) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))) {
+					bool flag = false;
+					for (int i = 0; i < menu.size(); i++) {
+						if (!menu[i])continue;
+						if (menu[i]->appearAni.gnp() > 0.7 || menu[i]->open) {
+							flag = true;
 							break;
 						}
 					}
-					if(!flag)Close();
+					if (!flag)Close();
 				}
 				// 计算控件总高度和总高度
 				type.resize(Size());
@@ -5065,7 +5128,7 @@ namespace ggcc {
 				Height = 0;
 				Width = 0;
 				for (int i = 0; i < key.size(); i++) {
-					if(type[i] == 2){
+					if (type[i] == 2) {
 						Height += UnitHeight;
 						Width = std::max(Width, key[i]->width);
 						continue;
@@ -5079,7 +5142,7 @@ namespace ggcc {
 				w = Width;
 				h = Height;
 				X = x, Y = y, W = w, H = h;
-				if(open) {
+				if (open) {
 					wani.stp(w);
 					hani.stp(h);
 					appearAni.stp(1);
@@ -5109,18 +5172,18 @@ namespace ggcc {
 					} else if (type[i] == 1) {
 						if (!wani.is_run() && MouseInRect(x, y + nowh, w, UnitHeight)) {
 							DrawRectangle(x, y + nowh, w, UnitHeight, ColorF(ChooseColor));
-							if (next_check&&IsMouseButtonPressed(MOUSE_BUTTON_LEFT))click = key[i]->text;
-							if (next_check&&IsMouseButtonDown(MOUSE_BUTTON_LEFT))DrawRectangle(x, y + nowh, w, UnitHeight, ColorF(ChooseColor));
+							if (next_check && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))click = key[i]->text;
+							if (next_check && IsMouseButtonDown(MOUSE_BUTTON_LEFT))DrawRectangle(x, y + nowh, w, UnitHeight, ColorF(ChooseColor));
 						}
 						nowh += key[i]->Draw_Auto(x + SpaceSize * 2, y + nowh, w - SpaceSize * 4, next_check);
 					} else if (type[i] == 2) {
-						if(menu[i])Print(x+SpaceSize*3+TextHeight,y+nowh+(UnitHeight-TextHeight)/2,menu[i]->text);
-						Print(x+w-SpaceSize*2-TextHeight/2,y+nowh+(UnitHeight-TextHeight)/2,">",LineColor);
-						if(menu[i])menu[i]->SetPos(x+w+SpaceSize,y+nowh);
+						if (menu[i])Print(x + SpaceSize * 3 + TextHeight, y + nowh + (UnitHeight - TextHeight) / 2, menu[i]->text);
+						Print(x + w - SpaceSize * 2 - TextHeight / 2, y + nowh + (UnitHeight - TextHeight) / 2, ">", LineColor);
+						if (menu[i])menu[i]->SetPos(x + w + SpaceSize, y + nowh);
 						if (!wani.is_run() && MouseInRect(x, y + nowh, w, UnitHeight)) {
 							DrawRectangle(x, y + nowh, w, UnitHeight, ColorF(ChooseColor));
-							if (next_check&&IsMouseButtonPressed(MOUSE_BUTTON_LEFT))if(menu[i])menu[i]->ChangeState(x+w+SpaceSize,y+nowh);
-							if (next_check&&IsMouseButtonDown(MOUSE_BUTTON_LEFT))DrawRectangle(x, y + nowh, w, UnitHeight, ColorF(ChooseColor));
+							if (next_check && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))if (menu[i])menu[i]->ChangeState(x + w + SpaceSize, y + nowh);
+							if (next_check && IsMouseButtonDown(MOUSE_BUTTON_LEFT))DrawRectangle(x, y + nowh, w, UnitHeight, ColorF(ChooseColor));
 						}
 						nowh += UnitHeight;
 					}
@@ -5150,10 +5213,10 @@ namespace ggcc {
 				return *this;
 			}
 			TopMenuButton& AddButton(std::string text_) {
-				return AddButton("",text_);
+				return AddButton("", text_);
 			}
 			TopMenuButton& withMenu(Pulldown* temp) {
-				menu[menu.size()-1]=temp;
+				menu[menu.size() - 1] = temp;
 				return *this;
 			}
 			int DrawOne(int id, int x, int y, int w, int h, bool check = true) {
@@ -5167,7 +5230,7 @@ namespace ggcc {
 					if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && check)DrawRectangle(x, y + SpaceSize / 2, w, h - SpaceSize, ColorF(ChooseColor));
 					if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && check) {
 						click = id;
-						if(menu[id])menu[id]->Open(x,y+h+SpaceSize);
+						if (menu[id])menu[id]->Open(x, y + h + SpaceSize);
 					}
 				}
 			}
@@ -5274,7 +5337,7 @@ namespace ggcc {
 					if (pop)a = (gclock() - pop_time) / 200.0;
 					else a = 1 - (gclock() - pop_time) / 200.0;
 					if (a > 1)a = 1;
-
+					
 					special_effect::DrawShadowRectangle(tx, ty, tw, th, a * 15 * dpi);
 					DrawRectangleRounded(Rectangle{(float)tx, (float)ty, (float)tw, (float)th}, 0.4, 10, Fade(BgColor, a * 0.7));
 					DrawRectangleRoundedLines(Rectangle{(float)tx, (float)ty, (float)tw, (float)th}, 0.4, 10, dpi, Fade(MainColor, a * 0.7));
@@ -5288,7 +5351,7 @@ namespace ggcc {
 			SliderBar sx, sy;						// 横向、纵向滚动条
 			int maxw = 100 * dpi, maxh = 100 * dpi;	// 最大宽度、高度
 			Animation appearAni;					// 淡入动画
-
+			
 		public:
 			bool slider_visible = false;			// 是否显示滚动条
 			void (*draw_fun)(int, int, int, int, bool) = nullptr;// 绘制函数
@@ -5383,7 +5446,7 @@ namespace ggcc {
 				sider.Draw(x, y, w, h, check);
 				// 绘制控件
 				for (int i = 0; i < key.size(); i++)if (key[i]->extra)
-						key[i]->Draw_Auto_Extra(sider.X + GetAniBias(2) / 2, sider.Y + GetAniBias(2) / 2, sider.W - GetAniBias(2), sider.H - GetAniBias(2), check);
+					key[i]->Draw_Auto_Extra(sider.X + GetAniBias(2) / 2, sider.Y + GetAniBias(2) / 2, sider.W - GetAniBias(2), sider.H - GetAniBias(2), check);
 				EndAlphaMode();
 				BeginScissor(sider.X, sider.Y, sider.W, sider.H);
 				if (DebugMode) {
@@ -5431,7 +5494,7 @@ namespace ggcc {
 			Animation appearAni;				// 淡入动画
 			bool move_enable = false;			// 是否可以左右移动
 			int tab = 0;						// 当前标签页
-
+			
 			bool DrawLeft(int x, int y, int w, int h, bool check = true) {
 				DrawRectangle(x, y, w, h, ColorF(255, 255, 255, 150));
 				DrawLineEx(Vector2{x + w * 0.3, y + h * 0.5}, Vector2{x + w * 0.7, y + h * 0.3}, dpi, ColorF(BLACK));
@@ -5459,12 +5522,12 @@ namespace ggcc {
 				if (id > 0)return appearAni.GetPos(gclock() - id * 50);
 				else return appearAni.GetPos((gclock() - appearAni.gst()) / 2 + appearAni.gst() + id * 50);
 			}
-
+			
 		public:
 			SiderPosition position = spos_top;	// 标签栏的位置
 			SiderPosition fposition = spos_top;	// 标签栏选择标记的位置
 			bool close_enable = false;			// 是否允许关闭标签页
-
+			
 			MultiTab() {
 				tabAni.sd(400);
 				widthAni.sd(200);
@@ -5580,15 +5643,15 @@ namespace ggcc {
 				}
 				if (close_enable) {
 					DrawLineEx(
-					    Vector2{x + w - SpaceSize * 2 - TextHeight * 0.25, y + t + TextHeight * 0.25},
-					    Vector2{x + w - SpaceSize * 2 - TextHeight * 0.75, y + t + TextHeight * 0.75},
-					    dpi * 2, ColorF(color)
-					);
+						Vector2{x + w - SpaceSize * 2 - TextHeight * 0.25, y + t + TextHeight * 0.25},
+						Vector2{x + w - SpaceSize * 2 - TextHeight * 0.75, y + t + TextHeight * 0.75},
+						dpi * 2, ColorF(color)
+						);
 					DrawLineEx(
-					    Vector2{x + w - SpaceSize * 2 - TextHeight * 0.75, y + t + TextHeight * 0.25},
-					    Vector2{x + w - SpaceSize * 2 - TextHeight * 0.25, y + t + TextHeight * 0.75},
-					    dpi * 2, ColorF(color)
-					);
+						Vector2{x + w - SpaceSize * 2 - TextHeight * 0.75, y + t + TextHeight * 0.25},
+						Vector2{x + w - SpaceSize * 2 - TextHeight * 0.25, y + t + TextHeight * 0.75},
+						dpi * 2, ColorF(color)
+						);
 				}
 				return 0;
 			}
@@ -5697,7 +5760,7 @@ namespace ggcc {
 			bool close_enable = true;							// 是否可关闭
 			int title_height = 25 * dpi;						// 标题高度
 			Layout layout;										// 排版
-
+			
 			Window(std::string title_ = "Window", int x = 50, int y = 50, int w = 800, int h = 600, ReleaseFunc fun = nullptr) {
 				title = title_;
 				X = x, Y = y, W = w, H = h;
@@ -5749,7 +5812,7 @@ namespace ggcc {
 				if (Y + H > winH)Y = winH - H;
 			}
 			int Draw(int x, int y, int w, int h, bool check = true) {
-
+				
 				// 更新动画
 				if (open) {
 					if (WindowState == state_moving) {
@@ -5773,13 +5836,13 @@ namespace ggcc {
 				y = yani.gnp() - WindowPos.y;
 				w = wani.gnp();
 				h = hani.gnp();
-
+				
 				// 绘制背景
 				if (!pop && !xani.IsRunning())return 0;
 				if (draw_dark && !is_mainwin) {
 					DrawRectangle(0, 0, winW, winH, Fade(BLACK, darkani.gnp()));
 				}
-
+				
 				// 绘制主体
 				if (draw_body) {
 					special_effect::DrawShadowRectangle(x, y, w, h, 15 * dpi);
@@ -5807,15 +5870,15 @@ namespace ggcc {
 								}
 							}
 							DrawLineEx(
-							    Vector2{x + w - title_height * 0.3, y + title_height * 0.3},
-							    Vector2{x + w - title_height * 0.7, y + title_height * 0.7},
-							    dpi, ColorF(TextColor2)
-							);
+								Vector2{x + w - title_height * 0.3, y + title_height * 0.3},
+								Vector2{x + w - title_height * 0.7, y + title_height * 0.7},
+								dpi, ColorF(TextColor2)
+								);
 							DrawLineEx(
-							    Vector2{x + w - title_height * 0.7, y + title_height * 0.3},
-							    Vector2{x + w - title_height * 0.3, y + title_height * 0.7},
-							    dpi, ColorF(TextColor2)
-							);
+								Vector2{x + w - title_height * 0.7, y + title_height * 0.3},
+								Vector2{x + w - title_height * 0.3, y + title_height * 0.7},
+								dpi, ColorF(TextColor2)
+								);
 						}
 					}
 					if (priority == WindowTopPriority) {
@@ -5837,14 +5900,14 @@ namespace ggcc {
 						h -= title_height;
 					}
 				}
-
+				
 				BeginScissor(x, y, w, h);
-
+				
 				// 绘制侧边栏
 				sider.Draw(x, y, w, h, check);
 				int tx = x, ty = y, tw = w, th = h;
 				x = sider.X, y = sider.Y, w = sider.W, h = sider.H;
-
+				
 				// 绘制界面
 				xani.update();
 				yani.update();
@@ -5859,7 +5922,7 @@ namespace ggcc {
 				yani.update();
 				wani.update();
 				hani.update();
-
+				
 				// 绘制标题
 				if (draw_title) {
 					if (priority == WindowTopPriority || check) {
@@ -5901,7 +5964,7 @@ namespace ggcc {
 						}
 					}
 				}
-
+				
 				// 边界检查
 				if (W < 100 * dpi)W = 100 * dpi;
 				if (H < title_height)H = title_height;
@@ -5913,7 +5976,7 @@ namespace ggcc {
 					if (X + W > winW)X = winW - W;
 					if (Y + H > winH)Y = winH - H;
 				}
-
+				
 				// 更新动画
 				if (pop) {
 					xani.stp(X + WindowPos.x);
@@ -5921,12 +5984,12 @@ namespace ggcc {
 					wani.stp(W);
 					hani.stp(H);
 				}
-
+				
 				// 结束
 				return 0;
 			}
 		} mainwin;
-
+		
 		System::~System() {
 			std::cout << std::endl;
 			std::cout << "__________________________________" << std::endl << std::endl;
@@ -5966,13 +6029,13 @@ namespace ggcc {
 				c[i] = false;
 				if (!win[i].first->pop)continue;
 				if ( (MouseInRect(win[i].first->X - k, win[i].first->Y - k, win[i].first->W + k * 2, win[i].first->H + k * 2) || win[i].first->is_mainwin )
-				     && (win[i].first->priority == WindowTopPriority || !win[i].first->is_mainwin)) {
+					&& (win[i].first->priority == WindowTopPriority || !win[i].first->is_mainwin)) {
 					c[i] = true;
 					break;
 				}
 			}
 			for (int i = win.size() - 1; i >= 0; i--) {
-				if(win[i].first->pop) win[i].first->Draw_Auto_Extra(0, 0, winW, winH, c[i]);
+				if (win[i].first->pop) win[i].first->Draw_Auto_Extra(0, 0, winW, winH, c[i]);
 			}
 		}
 		void System::Erase(Priority* w) {
@@ -5982,7 +6045,7 @@ namespace ggcc {
 					win.erase(win.begin() + i);
 				}
 		}
-
+		
 		class LeftMenu : public Element {
 		public:
 			int n = 5;
@@ -6066,7 +6129,7 @@ namespace ggcc {
 				return move.gnp();
 			}
 		};
-
+		
 		int Init(int winw = 1080, int winh = 720, double zoom = 1) {
 			// 窗口
 			if (!IsWindowReady()) {
@@ -6159,7 +6222,7 @@ namespace ggcc {
 				ClearBackground(BgColor);
 				EndDrawing();
 			}
-
+			
 			return 0;
 		}
 		void Update() {
@@ -6188,9 +6251,9 @@ namespace ggcc {
 				GetChar = 0;
 				GetCharString = "";
 				for (int i = 32; i <= 96; i++)if (IsKeyInput(i)) {
-						GetChar = i;
-						break;
-					}
+					GetChar = i;
+					break;
+				}
 				if (GetChar && IsKeyDown(KEY_LEFT_SHIFT)) {
 					if (GetChar == '1')GetCharString = "!";
 					else if (GetChar == '2')GetCharString = "@";
@@ -6218,7 +6281,8 @@ namespace ggcc {
 				else if (!GetChar)GetCharString = "";
 			} else {
 				int key = GetCharPressed();
-				GetChar = key;
+				if (key <= 128) GetChar = key;
+				else if (key) GetChar = ' ';
 				GetCharString = "";
 				while (key > 0) {
 					std::string temp = wp::GetChar(key);
@@ -6252,6 +6316,15 @@ namespace ggcc {
 				UnloadCodepoints(codepoints);
 				UnloadFileData(fontFileData);
 			}
+			if (UseEmoji.Change()) {
+				int fileSize;
+				unsigned char *fontFileData = LoadFileData("c:\\windows\\fonts\\seguiemj.ttf", &fileSize);
+				int codepointsCount;
+				int *codepoints = LoadCodepoints((UseEmoji.Text() + "啊看见对方").c_str(), &codepointsCount);
+				IconFont = LoadFontFromMemory(".ttf", fontFileData, fileSize, TextHeight, codepoints, codepointsCount);
+				UnloadCodepoints(codepoints);
+				UnloadFileData(fontFileData);
+			}
 			UseCharacter.SetMaximum(CharactorLoadMaximum);
 			UseCharacter.Update();
 			// 绘制
@@ -6270,20 +6343,19 @@ namespace ggcc {
 		void Run(void (*script)() = nullptr) {
 			while (!WindowShouldClose()) {
 				BeginDrawing();
-				//rlViewport(0,0,ui::winW,ui::winH);
 				ClearBackground(ui::BgColor);
 				ui::Update();
-				if (script != nullptr)script();
+				if (script)script();
 				EndDrawing();
 			}
 			Running = true;
 		}
-
+		
 	}
-
+	
 	// 实验功能============================
 	namespace add {
-
+		
 		int FatherElementDeep = 0;
 		int FatherLayoutDeep = 0;
 		ui::Element* FatherElement = nullptr;
@@ -6474,9 +6546,9 @@ namespace ggcc {
 			ui::MultiTab* temp = new ui::MultiTab;
 			return *temp;
 		}
-
+		
 		namespace sider {
-
+			
 			ui::TopMenuButton& TopMenuButton() {
 				ui::TopMenuButton* temp = new ui::TopMenuButton();
 				if (GetFatherElement() != nullptr)GetFatherElement()->sider.AddSider(temp, ui::spos_top, ui::auto_release);
@@ -6487,12 +6559,12 @@ namespace ggcc {
 				if (GetFatherElement() != nullptr)GetFatherElement()->sider.AddSider(temp, ui::spos_bottom, ui::auto_release);
 				return *temp;
 			}
-
+			
 		}
-
+		
 	}
 	// ====================================
-
+	
 	// 平面几何绘制函数
 	namespace pg {
 		void circle::Draw(ui::GraphDebugger* G, realn r2, realn g, realn b, realn a) {
@@ -6516,7 +6588,8 @@ namespace ggcc {
 			return;
 		}
 	}
-
+	
 }
 
 #endif
+
