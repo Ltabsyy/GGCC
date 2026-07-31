@@ -2,21 +2,45 @@
 
 ## V 2.3.4
 
+- 新增：根据群友 <mark>**Ltabssy**</mark> 提供的算法和配色方案，优化代码高亮
+
+- 新增：代码高亮配色方案："One Dark"，"VS Modern Dark"，"MoLo CodeBlack”，"Monokai Pro"
+
+- 新增：多行输入框（MultiInputBox）中增加 statebar_visible 选项设置是否显示状态栏
+
+- 新增：多行输入框（MultiInputBox）中提供对<mark>【图标字体】</mark>和<mark>【Emoji】</mark>的初步支持
+
+- 新增：多行输入框（MultiInputBox）小地图可显示当前行高亮
+
 - 新增：下拉菜单（Pulldown）
 
 - 新增：上部菜单按钮（TopMenuButton）加入 withMenu() 函数指定下拉菜单
 
-- 新增：彩色文本（ColorText）添加 click_enable成员设置是否可以被点击，并添加 click 成员判断是否被点击，可以用户自主定义点击后事件
+- 新增：彩色文本（ColorText）添加 click_enable 成员设置是否可以被点击，并添加 click 成员判断是否被点击，可以用户自主定义点击后事件
 
 - 新增：彩色文本（ColorText）可指定图标
 
 - 新增：超链接（Hyperlink）提供 click 成员判断是否被点击，可以用户自主定义点击后事件，而不一定打开网址
+
+- 新增：崩溃处理机制（Crash Processing），就已发现无法解决的崩溃情况进行编号，详见<mark><u>**《GGCC-UI 崩溃记录及原因》**</u></mark>
 
 - 修正：折叠面板（Collapse）收起动画绘制不正确
 
 - 修正：超链接（Hyperlink）字符串长度计算有误
 
 - 修正：开头动画卡顿
+
+- 修正："开"，"崀" 等个别汉字无法通过键盘输入
+
+- 修正：输入 emoji 符号会崩溃（原因是没有考虑编码超过 65536 的字符，emoji 的编码却达到了6位数）
+
+- 调整：统一多行输入框（MultiInputBox）内背景色
+
+- 调整：多行输入框（MultiInputBox）中左右移动光标时，到达行首行尾时增加一定延时
+
+- 调整：默认取消多行输入框（MultiInputBox）中行号栏和小地图的阴影，可以设置选项 shadow_visible 重新启用
+
+- 调整：滚动条拖动手感小幅优化
 
 ## V 2.3.3
 
@@ -103,3 +127,5 @@
 - 调整：重构 GGCC-UI
 
 - 新增：界面（Interface） 提供【延迟+上浮+淡入】动画和【放大+淡入】动画
+
+
