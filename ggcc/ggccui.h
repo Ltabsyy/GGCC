@@ -742,7 +742,7 @@ namespace ggcc {
 					0,
 					0, 0, 0, 0,
 				};//是否为类型关键字
-				//符号着色
+//符号着色
 				for(r=0; r<content.size(); r++)
 				{
 					for(c=0; c<content[r].size(); c++)
@@ -791,7 +791,7 @@ namespace ggcc {
 						}
 					}
 				}
-				//数字着色
+//数字着色
 				for(r=0; r<content.size(); r++)
 				{
 					for(c=0; c<content[r].size(); c++)
@@ -800,7 +800,13 @@ namespace ggcc {
 						{
 							if(c > 0 && ((content[r][c-1] >= 'A' && content[r][c-1] <= 'Z')
 								|| (content[r][c-1] >= 'a' && content[r][c-1] <= 'z')
-								|| content[r][c-1] == '_'));
+								|| content[r][c-1] == '_'))
+							{
+								while(content[r][c+1] >= '0' && content[r][c+1] <= '9')
+								{
+									c++;//连续跳过多个数字
+								}
+							}
 							else//数字前面不是字母或下划线
 							{
 								type[r][c] = Type_Number;
@@ -814,7 +820,7 @@ namespace ggcc {
 								type[r][c] = Type_Number;
 							}
 						}
-						if(content[r][c] == '0' && c+1 < content[r].size() && content[r][c+1] == 'x')//十六进制数
+						if(content[r][c] == '0' && type[r][c] == Type_Number && c+1 < content[r].size() && content[r][c+1] == 'x')//十六进制数
 						{
 							if(c+2 < content[r].size())
 							{
@@ -841,7 +847,7 @@ namespace ggcc {
 						}
 					}
 				}
-				//预处理指令着色
+//预处理指令着色
 				for(r=0; r<content.size(); r++)
 				{
 					if(content[r].size() > 0 && content[r][0] == '#')
@@ -883,43 +889,39 @@ namespace ggcc {
 						}
 					}//行首为#且在<前的内容
 				}
-				//注释着色
+//注释着色
 				start = 0;
-				for(r=0; r<content.size(); r++)
-				{
-					for(c=0; c+1 < content[r].size(); c++)
-					{
-						if(content[r][c] == '/' && content[r][c+1] == '*')
-						{
-							start = 1;
-						}
-						if(start == 1)
-						{
-							type[r][c] = Type_Comment;
-						}
-						if(content[r][c] == '*' && content[r][c+1] == '/')
-						{
-							start = 0;
-							type[r][c+1] = Type_Comment;
-						}
-					}
-					for(c=0; c+1 < content[r].size(); c++)
-					{
-						if(content[r][c] == '/' && content[r][c+1] == '/')
-						{
-							for(; c<content[r].size(); c++)
-							{
-								type[r][c] = Type_Comment;
-							}
-						}
-					}
-				}
-				//字符和字符串着色
 				for(r=0; r<content.size(); r++)
 				{
 					for(c=0; c<content[r].size(); c++)
 					{
-						if(content[r][c] == '\'')
+						if(content[r][c] == '/' && c+1 < content[r].size())
+						{
+							if(content[r][c+1] == '*') start = 1;
+							else if(content[r][c+1] == '/')
+							{
+								for(; c<content[r].size(); c++)
+								{
+									type[r][c] = Type_Comment;
+								}
+								continue;
+							}
+						}
+						if(start == 1) type[r][c] = Type_Comment;
+						if(content[r][c] == '*' && c+1 < content[r].size() && content[r][c+1] == '/')
+						{
+							start = 0;
+							type[r][c+1] = Type_Comment;
+							c++;
+						}
+					}
+				}
+//字符和字符串着色
+				for(r=0; r<content.size(); r++)
+				{
+					for(c=0; c<content[r].size(); c++)
+					{
+						if(content[r][c] == '\'' && type[r][c] == Type_Default)
 						{
 							start = c;
 							end = -1;
@@ -948,7 +950,7 @@ namespace ggcc {
 					}
 					for(c=0; c<content[r].size(); c++)
 					{
-						if(content[r][c] == '"')
+						if(content[r][c] == '"' && type[r][c] == Type_Default)
 						{
 							start = c;
 							end = -1;
@@ -1035,7 +1037,7 @@ namespace ggcc {
 						}
 					}
 				}
-				//彩虹括号着色
+//彩虹括号着色
 				for(r=0; r<content.size(); r++)
 				{
 					for(c=0; c<content[r].size(); c++)
@@ -1062,7 +1064,7 @@ namespace ggcc {
 						}
 					}
 				}
-				//关键字着色
+//关键字着色
 				for(r=0; r<content.size(); r++)
 				{
 					for(c=0; c<content[r].size(); c++)
@@ -1089,6 +1091,7 @@ namespace ggcc {
 										|| (content[r][end] >= 'a' && content[r][end] <= 'z')
 										|| content[r][end] == '_'))
 									{
+										end = start;
 										continue;
 									}
 									else
@@ -1112,7 +1115,7 @@ namespace ggcc {
 						}
 					}
 				}
-				//标识符着色
+//标识符着色
 				for(r=0; r<content.size(); r++)
 				{
 					for(c=0; c+1 < content[r].size(); c++)
