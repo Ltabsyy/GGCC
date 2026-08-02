@@ -4522,14 +4522,11 @@ namespace ggcc {
 				fw.close();
 			}
 			int Draw(int x, int y, int w, int h, bool check = true) {
-				
+				// 开始
 				BeginScissor(x, y, w, h);
-				
 				// 更新动画
 				ipx.stp(wp::Index2Cursor(input, input_pos.y, input_pos.x)), ipy.stp(input_pos.y);
 				ipx.update(), ipy.update();
-				sx.SetControl(x, y, w, h);
-				sy.SetControl(x, y, w, h);
 				X = x, Y = y, W = w, H = w;
 				vector2d input_pos1 = vector2d(wp::Index2Cursor(input, input_pos.y, input_pos.x), input_pos.y);
 				// 计算文本区起止位置
@@ -4537,17 +4534,15 @@ namespace ggcc {
 				int start_y = (sy.Now() - ui::SpaceSize) / ui::UnitHeight;
 				int end_x = 2 * (sx.Now() - ui::SpaceSize + w - label_visible * ui::TextHeight * 4 - minimap_visible * minimap_width ) / ui::TextHeight + 1;
 				int end_y = (sy.Now() - ui::SpaceSize + h) / ui::UnitHeight + 1;
+				int tempH = (ui::UnitHeight - ui::TextHeight) / 2;
+				int tempx = x - sx.Now() + ui::SpaceSize;
+				int tempy = y - sy.Now() + ui::SpaceSize;
 				// 绘制背景色
-				if (background_color.r != BgColor.r ||
-					background_color.g != BgColor.g ||
-					background_color.b != BgColor.b)DrawRectangle(x, y, w, h, ColorF(background_color));
-				int tempW = 0;
+				if (background_color != BgColor)DrawRectangle(x, y, w, h, ColorF(background_color));
 				// 绘制行号
+				int tempW = 0;
 				if (label_visible) {
 					tempW = ui::TextHeight * 4;
-					int tempH = (ui::UnitHeight - ui::TextHeight) / 2;
-					int tempx = x - sx.Now() + ui::SpaceSize;
-					int tempy = y - sy.Now() + ui::SpaceSize;
 					// 绘制高亮行
 					if (highlight_visible) {
 						if (minimap_visible)DrawRectangle(x + ui::SpaceSize, tempy + ui::UnitHeight * ipy.gnp(), w - ui::SpaceSize - minimap_width, ui::UnitHeight, ColorF(100, 100, 100, 100));
@@ -4558,18 +4553,12 @@ namespace ggcc {
 						size.x = std::max(size.x, (realn)input[i].size());
 						std::string temp_str = "";
 						for (int j = 1; j <= 4 - int(log10(i + 1)); j++)temp_str += ' ';
-						std::stringstream a;
-						a << (i + 1);
-						temp_str += a.str();
+						temp_str += wp::tostr(i+1);
 						if (i == input_pos.y)ui::Print(x + ui::TextHeight * 0.5, tempy + tempH + i * ui::UnitHeight, temp_str, highlight::GetColor(highlight::Type_Gutter_AL));
 						else ui::Print(x + ui::TextHeight * 0.5, tempy + tempH + i * ui::UnitHeight, temp_str, highlight::GetColor(highlight::Type_Gutter));
 					}
-					x += tempW;
-					w -= tempW;
+					x += tempW, tempx += tempW, w -= tempW;
 				} else {
-					int tempH = (ui::UnitHeight - ui::TextHeight) / 2;
-					int tempx = x - sx.Now() + ui::SpaceSize;
-					int tempy = y - sy.Now() + ui::SpaceSize;
 					// 绘制高亮行
 					if (highlight_visible) {
 						if (minimap_visible)DrawRectangle(x, tempy + ui::UnitHeight * ipy.gnp(), w - minimap_width, ui::UnitHeight, ColorF(100, 100, 100, 100));
@@ -4578,7 +4567,6 @@ namespace ggcc {
 				}
 				// 绘制状态栏
 				if (statebar_visible) {
-					int tempH = (ui::UnitHeight - ui::TextHeight) / 2;
 					h -= UnitHeight;
 					DrawRectangle(x - tempW, y + h, w + tempW, UnitHeight, ColorF(background_color));
 					Print(x - tempW + SpaceSize, y + h + tempH,
@@ -4586,14 +4574,11 @@ namespace ggcc {
 						highlight::GetColor(highlight::Type_Default));
 				}
 				// 计算文本裁剪区
-				int tempH = (ui::UnitHeight - ui::TextHeight) / 2;
-				int tempx = x - sx.Now() + ui::SpaceSize;
-				int tempy = y - sy.Now() + ui::SpaceSize;
 				char c = ui::GetChar;
 				if (minimap_visible)ui::BeginScissor(x, y, w - minimap_width, h);
 				else ui::BeginScissor(x, y, w, h);
-				size.x = 0;
 				// 计算文本长度
+				size.x = 0;
 				for (int i = start_y; i <= end_y; i++)size.x = std::max(size.x, (realn)wp::Index2Cursor(input, i, input[i].size()));
 				size.y = input.size();
 				// 计算光标透明度
@@ -4865,11 +4850,9 @@ namespace ggcc {
 					a = 200, fix_time = gclock();
 					if (ipx.gnp() * TextHeight / 2 < sx.Now())sx.Shift(ipx.gnp() * TextHeight / 2);
 					if (ipy.gnp() * UnitHeight < sy.Now())sy.Shift(ipy.gnp() * UnitHeight);
-					if (ipx.gnp() * TextHeight / 2 + SpaceSize * 2 > sx.Now() + w - SpaceSize * 3 - minimap_width * minimap_visible)sx.Shift(ipx.gnp() * TextHeight / 2 + SpaceSize * 2 - (w - SpaceSize * 3 - minimap_width * minimap_visible));
-					if ((ipy.gnp() + 1) * UnitHeight + SpaceSize * 2 > sy.Now() + h - SpaceSize * 3)sy.Shift((ipy.gnp() + 1) * UnitHeight + SpaceSize * 2 - (h - SpaceSize * 3));
+					if (ipx.gnp() * TextHeight / 2 + SpaceSize * 2 > sx.Now() + w - SliderWidth - minimap_width * minimap_visible)sx.Shift(ipx.gnp() * TextHeight / 2 + SpaceSize * 2 - (w - SliderWidth - minimap_width * minimap_visible));
+					if ((ipy.gnp() + 1) * UnitHeight + SpaceSize * 2 > sy.Now() + h - SliderWidth)sy.Shift((ipy.gnp() + 1) * UnitHeight + SpaceSize * 2 - (h - SliderWidth));
 				}
-				int ttt=(ipy.gnp() + 1) * UnitHeight + SpaceSize * 2 - sy.Now();
-				DrawRectangleLines(0,ttt,400,200,RED);
 				// 绘制文本
 				if (!color_scheme_enable) {
 					for (int i = start_y; i < std::min((int)input.size(), end_y); i++) {
@@ -5053,6 +5036,8 @@ namespace ggcc {
 				// 绘制滚动条
 				sx.SetFixed(true);
 				sy.SetFixed(true);
+				sx.SetControl(x, y, w, h);
+				sy.SetControl(x, y, w, h);
 				sx.SetDrawBackground(false);
 				sy.SetDrawBackground(false);
 				sx.SetSum(size.x * TextHeight / 2 + SliderWidth + tempW + minimap_width * minimap_visible);
