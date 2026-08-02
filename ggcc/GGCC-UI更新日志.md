@@ -4,13 +4,15 @@
 
 - 新增：根据群友 <mark>**Ltabssy**</mark> 提供的算法和配色方案，优化代码高亮
 
-- 新增：代码高亮配色方案："One Dark"，"VS Modern Dark"，"MoLo CodeBlack”，"Monokai Pro"
+- 新增：代码高亮配色方案："One Dark"，"VS Modern Dark"，"MoLo CodeBlack”，"Monokai Pro"，"Mariana"
 
 - 新增：多行输入框（MultiInputBox）中增加 statebar_visible 选项设置是否显示状态栏
 
 - 新增：多行输入框（MultiInputBox）中提供对<mark>【图标字体】</mark>和<mark>【Emoji】</mark>的初步支持
 
 - 新增：多行输入框（MultiInputBox）小地图可显示当前行高亮
+
+- 新增：多行输入框（MultiInputBox）增加彩虹缩进提示线
 
 - 新增：下拉菜单（Pulldown）
 
@@ -33,6 +35,8 @@
 - 修正："开"，"崀" 等个别汉字无法通过键盘输入
 
 - 修正：输入 emoji 符号会崩溃（原因是没有考虑编码超过 65536 的字符，emoji 的编码却达到了6位数）
+
+- 修正：多行输入框（MultiInputBox）内光标移动时，滚动条跟随不稳定
 
 - 调整：统一多行输入框（MultiInputBox）内背景色
 
@@ -127,5 +131,3 @@
 - 调整：重构 GGCC-UI
 
 - 新增：界面（Interface） 提供【延迟+上浮+淡入】动画和【放大+淡入】动画
-
-

@@ -532,6 +532,7 @@ namespace ggcc {
 	Animation& Animation::Goto(realn pos) {
 		TargetPos=pos;
 		StartPos=pos;
+		NowPos=pos;
 		StartTime=gclock()-Duration;
 		return *this;
 	}
