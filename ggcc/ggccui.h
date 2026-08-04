@@ -5,7 +5,7 @@
 #define GGCCUI_H
 
 // 以下是当前版本号
-#define UIVer "GGCC UI 2.3.4.0726"
+#define UIVer "GGCC UI 2.3.5.0726"
 
 #include <bits/stdc++.h>
 #include <raylib.h>
@@ -83,7 +83,7 @@ namespace ggcc {
 		char GetChar = 0;								// 字符输入
 		std::string GetCharString = "";					// 字符输入
 		int MouseCursorStyle = MOUSE_CURSOR_ARROW;		// 鼠标样式
-		bool AutoInterface = true;						// 是否开启自动添加至主界面
+		bool AutoPage = true;						// 是否开启自动添加至主界面
 		bool DrawSpecialEffect = true;					// 是否开启特效
 		bool DebugMode = false;							// 是否开启调试模式
 		bool StartAni = true;							// 是否开启启动动画
@@ -128,10 +128,12 @@ namespace ggcc {
 		class Switch;									// 开关
 		class Choose;									// 选择框
 		class Collapse;									// 折叠面板
-		class Interface;								// 界面
+		class Page;										// 界面
 		class Popup;									// 弹窗
 		class InputBox;									// 输入框
 		class CheckBox;									// 复选框
+		class GraphDebugger;							// 图形调试器
+		class GraphDebugger3D;							// 3D图形调试器
 		class System;									// 系统
 		class Window;									// 窗口
 		class SiderManager;								// 侧边栏管理器
@@ -1663,6 +1665,7 @@ namespace ggcc {
 				return *this;
 			}
 		};
+		Element TemporaryMemorizer;			// 临时储存器（结束后释放所有元素）
 		int release_deep = 0;
 		void auto_release(Element* ele) {
 			for (int i = 0; i < release_deep; i++)std::cout << "  - ";
@@ -1963,9 +1966,8 @@ namespace ggcc {
 				return ui::SpaceSize * 4;
 			}
 		};
-		class Layout {
+		class Layout : public Element {
 		public:
-			ui::Element* intf = nullptr;
 			Layout* lo1 = nullptr;
 			Layout* lo2 = nullptr;
 			realn split = 0.5;
@@ -1973,6 +1975,9 @@ namespace ggcc {
 			bool moving = false;
 			SplitStyle split_style = split_main;
 			
+			Layout() {
+				Add(nullptr);
+			}
 			~Layout() {
 				delete lo1;
 				delete lo2;
@@ -1983,32 +1988,37 @@ namespace ggcc {
 			bool IsMoving() {
 				return moving;
 			}
-			Element* Intf1() {
-				if (lo1)return lo1->intf;
+			Element* page1() {
+				if (lo1)return lo1->key[0];
 				return nullptr;
 			}
-			Element* Intf2() {
-				if (lo2)return lo2->intf;
+			Element* page2() {
+				if (lo2)return lo2->key[0];
 				return nullptr;
+			}
+			Layout& Set(Element* ptr) {
+				ClearKey();
+				Add(ptr);
 			}
 			Layout& Split(SplitStyle style, ui::Element* i1 = nullptr, ui::Element* i2 = nullptr) {
+				if (!Size())Add(nullptr);
 				if (style == split_main) {
 					split_style = style;
-					intf = i1;
+					key[0] = i1;
 				} else {
 					split_style = style;
-					if (lo1 != nullptr && lo1->intf != i1) {
+					if (lo1 != nullptr && lo1->key[0] != i1) {
 						delete lo1;
 						lo1 = nullptr;
 					}
-					if (lo2 != nullptr && lo2->intf != i2) {
+					if (lo2 != nullptr && lo2->key[0] != i2) {
 						delete lo2;
 						lo2 = nullptr;
 					}
 					if (lo1 == nullptr)lo1 = new Layout;
 					if (lo2 == nullptr)lo2 = new Layout;
-					lo1->intf = i1;
-					lo2->intf = i2;
+					lo1->key[0] = i1;
+					lo2->key[0] = i2;
 				}
 				return *this;
 			}
@@ -2018,8 +2028,8 @@ namespace ggcc {
 			}
 			int Draw(int x, int y, int w, int h, bool check = true) {
 				int k = SpaceSize;
-				if (split_style == split_main && intf) {
-					intf->Draw_Auto_Extra(x, y, w, h, check);
+				if (split_style == split_main && key[0]) {
+					key[0]->Draw_Auto_Extra(x, y, w, h, check);
 				} else if (split_style == split_row) {
 					if (movable) {
 						if (moving) {
@@ -2848,6 +2858,7 @@ namespace ggcc {
 				return height;
 			}
 		};
+		GraphDebugger* NowGraphDebugger;
 		class GraphDebugger : public Element {
 		public:
 			vector2d camera = {0, 0};
@@ -5654,7 +5665,7 @@ namespace ggcc {
 				return h;
 			}
 		};
-		class Interface : public Element {
+		class Page : public Element {
 		private:
 			int Height = 0;						// 控件高度
 			bool swapping = false;				// 是否正在执行交换动画
@@ -5669,7 +5680,7 @@ namespace ggcc {
 			realn blank = 0.3;					// 滚动条空白
 			SliderBar sbar;						// 滚动条
 			Position pos = pos_full;			// 控件位置
-			Interface() {
+			Page() {
 				extra = true;
 			}
 			realn GetAniBias(int id) {
@@ -5731,8 +5742,7 @@ namespace ggcc {
 				EndScissor();
 				return Height;
 			}
-		} mainintf;
-		using interface = Interface;
+		} mainpage;
 		class MultiTab : public Element {
 		private:
 			std::vector<std::string> ttext;		// 标签名称
@@ -5793,28 +5803,31 @@ namespace ggcc {
 				}
 			}
 			inline int TabSize() {
-				return text.size();
+				return ttext.size();
 			}
-			void AddTab(std::string text_, Element* ele_ = nullptr, ReleaseFunc fun_ = nullptr) {
+			MultiTab& AddTab(std::string text_, Element* ele_ = nullptr, ReleaseFunc fun_ = nullptr) {
 				icon.push_back("");
 				ttext.push_back(text_);
 				ele.push_back(ele_);
 				tabrlf.push_back(fun_);
+				return *this;
 			}
-			void AddTab(std::string icon_, std::string text_, Element* ele_ = nullptr, ReleaseFunc fun_ = nullptr) {
+			MultiTab& AddTab(std::string icon_, std::string text_, Element* ele_ = nullptr, ReleaseFunc fun_ = nullptr) {
 				icon.push_back(icon_);
 				ttext.push_back(text_);
 				ele.push_back(ele_);
 				tabrlf.push_back(fun_);
+				return *this;
 			}
-			void EraseTab(int id) {
+			MultiTab& EraseTab(int id) {
 				if (tabrlf[id])tabrlf[id](ele[id]);
 				ttext.erase(ttext.begin() + id);
 				icon.erase(icon.begin() + id);
 				ele.erase(ele.begin() + id);
 				tabrlf.erase(tabrlf.begin() + id);
+				return *this;
 			}
-			void EraseTab(Element* ele_) {
+			MultiTab& EraseTab(Element* ele_) {
 				for (int i = 0; i < text.size(); i++)
 					if (ele[i] == ele_) {
 						if (tabrlf[i])tabrlf[i](ele[i]);
@@ -5823,19 +5836,22 @@ namespace ggcc {
 						ele.erase(ele.begin() + i);
 						tabrlf.erase(tabrlf.begin() + i);
 					}
+				return *this;
 			}
-			void InsertTab(int id, std::string text_, Element* ele_ = nullptr, ReleaseFunc fun_ = nullptr) {
+			MultiTab& InsertTab(int id, std::string text_, Element* ele_ = nullptr, ReleaseFunc fun_ = nullptr) {
 				if (id <= tab)tab++;
 				icon.insert(icon.begin() + id, "");
 				ttext.insert(ttext.begin() + id, text_);
 				ele.insert(ele.begin() + id, ele_);
 				tabrlf.insert(tabrlf.begin() + id, fun_);
+				return *this;
 			}
-			void InsertTab(int id, std::string icon_, std::string text_, Element* ele_ = nullptr, ReleaseFunc fun_ = nullptr) {
+			MultiTab& InsertTab(int id, std::string icon_, std::string text_, Element* ele_ = nullptr, ReleaseFunc fun_ = nullptr) {
 				if (id <= tab)tab++;
 				icon.insert(icon.begin() + id, icon_);
 				ttext.insert(ttext.begin() + id, text_);
 				tabrlf.insert(tabrlf.begin() + id, fun_);
+				return *this;
 			}
 			bool FindTabText(std::string text_) {
 				for (int i = 0; i < ttext.size(); i++)if (ttext[i] == text_)return true;
@@ -5856,7 +5872,7 @@ namespace ggcc {
 				if (id == -1)return ele[tab];
 				else return ele[id];
 			}
-			void SetTab(int id) {
+			MultiTab& SetTab(int id) {
 				tab = id;
 				int w = 0;
 				width.resize(id + 1);
@@ -5868,6 +5884,8 @@ namespace ggcc {
 				}
 				if (w - width[id] < moveAni.gnp())moveAni.stp(w - width[id]);
 				if (w > moveAni.gnp() + W)moveAni.stp(w - W);
+				
+				return *this;
 			}
 			int DrawOne(int id, int x, int y, int w, int h, bool check = true) {
 				int t = (UnitHeight * 1.5 - TextHeight) / 2;
@@ -5926,7 +5944,7 @@ namespace ggcc {
 				moveAni.update();
 				tabAni.update();
 				widthAni.update();
-				width.resize(text.size());
+				width.resize(ttext.size());
 				if (position == spos_top) {
 					DrawRectangle(x, y, w, UnitHeight * 1.5, ColorF(MenuColor));
 					if (TabSize() > 0) {
@@ -5981,7 +5999,7 @@ namespace ggcc {
 				if (w2 - moveAni.gtp() < w)moveAni.stp(std::max(0, w2 - w));
 				// 绘制页面
 				if (TabSize() > 0) {
-					if (ele[tab] != nullptr) {
+					if (ele[tab]) {
 						if (position == spos_top)ele[tab]->Draw_Auto_Extra(x, y + UnitHeight * 1.5, w, h - UnitHeight * 1.5, check);
 						if (position == spos_bottom)ele[tab]->Draw_Auto_Extra(x, y, w, h - UnitHeight * 1.5, check);
 					}
@@ -5997,28 +6015,29 @@ namespace ggcc {
 		class Window : public Priority {
 		private:
 			bool rx = false, ry = false, rw = false, rh = false;// 各条边框是否正在被拖动
-			int valid_x, valid_y, valid_w, valid_h;				// 我也不记得这是干啥的
-			Vector2 move_start, pos_start;						// 我也不记得这是干啥的
+			Vector2 move_start, pos_start;						// 鼠标拖动相关参数
 			Animation xani, yani, wani, hani, darkani;			// 动画
 			bool open = true;									// 是否打开窗口
 			
 		public:
 			std::string title = "Window";						// 窗口名称
-			std::string icon = "";							// 窗口图标
+			std::string icon = "";								// 窗口图标
 			bool moving = false;								// 是否正在移动
 			bool draw_title = true;								// 是否绘制标题
 			bool draw_body = true;								// 是否绘制主体
-			bool draw_dark = false;								// 是否绘制背景
+			bool draw_dark = false;								// 是否绘制深色背景
 			bool close_enable = true;							// 是否可关闭
 			int title_height = 25 * dpi;						// 标题高度
-			Layout layout;										// 排版
 			
 			Window(std::string title_ = "Window", int x = 50, int y = 50, int w = 800, int h = 600, ReleaseFunc fun = nullptr) {
 				title = title_;
 				X = x, Y = y, W = w, H = h;
-				darkani.ssp(0.7);
 				extra = true;
 				SetReleaseFunc(fun);
+			}
+			Window& Set(Element* ele) {
+				ClearKey();
+				Add(ele);
 			}
 			void Pop(int tx = 0, int ty = 0, int tw = winW, int th = winH, int fx = INT_MAX, int fy = INT_MAX, int fw = INT_MAX, int fh = INT_MAX) {
 				X = tx, Y = ty, W = tw, H = th;
@@ -6090,7 +6109,7 @@ namespace ggcc {
 				h = hani.gnp();
 				
 				// 绘制背景
-				if (!pop && !xani.IsRunning())return 0;
+				if (!pop)return 0;
 				if (draw_dark && !is_mainwin) {
 					DrawRectangle(0, 0, winW, winH, Fade(BLACK, darkani.gnp()));
 				}
@@ -6165,10 +6184,7 @@ namespace ggcc {
 				yani.update();
 				wani.update();
 				hani.update();
-				BeginScissor(x, y, w, h);
-				valid_x = x, valid_y = y, valid_w = w, valid_h = h;
-				layout.Draw(x, y, w, h, check && (!(rx || ry || rw || rh) | !IsMouseButtonDown(MOUSE_BUTTON_LEFT)));
-				EndScissor();
+				if(!key.empty()&&key[0])key[0]->Draw_Auto_Extra(x, y, w, h, check && (!(rx || ry || rw || rh) | !IsMouseButtonDown(MOUSE_BUTTON_LEFT)));
 				EndScissor();
 				xani.update();
 				yani.update();
@@ -6307,7 +6323,7 @@ namespace ggcc {
 			int choose = 0;
 			bool draw_full = false;
 			bool full_alltime = false;
-			interface* intf[32];
+			Page* page[32];
 			Window* target = nullptr;
 			Animation move;
 			bool move_inited = false;
@@ -6315,11 +6331,11 @@ namespace ggcc {
 			int choose_time = 0;
 			int menu_width = 250;
 			LeftMenu() {
-				mtext[0] = "Interface #1";
-				mtext[1] = "Interface #2";
-				mtext[2] = "Interface #3";
-				mtext[3] = "Interface #4";
-				mtext[4] = "Interface #5";
+				mtext[0] = "Page #1";
+				mtext[1] = "Page #2";
+				mtext[2] = "Page #3";
+				mtext[3] = "Page #4";
+				mtext[4] = "Page #5";
 				icon[0] = "";
 				icon[1] = "";
 				icon[2] = "";
@@ -6371,8 +6387,8 @@ namespace ggcc {
 				}
 				if (target != nullptr) {
 					if (choose != last_choose) {
-						target->layout.intf = intf[choose];
-						intf[choose]->sbar.Set(0);
+						target->key[0] = page[choose];
+						page[choose]->sbar.Set(0);
 						last_choose = choose;
 					}
 				}
@@ -6404,13 +6420,13 @@ namespace ggcc {
 				UnitHeight *= DPI.x;
 				SpaceSize *= DPI.x;
 				SliderWidth *= DPI.x;
-				mainintf.interval *= DPI.x;
+				mainpage.interval *= DPI.x;
 				dpi = DPI.x;
 				InitFinished = true;
 				// 虚拟窗口
 				mainwin.draw_body = false;
 				mainwin.is_mainwin = true;
-				mainwin.layout.intf = &mainintf;
+				// mainwin.Set(&mainpage);
 				// 字幕
 				std::cout << "__________________________________" << std::endl << std::endl;
 				std::cout << "[#] UI started successfully!" << std::endl;
@@ -6611,7 +6627,7 @@ namespace ggcc {
 		int FatherElementDeep = 0;
 		int FatherLayoutDeep = 0;
 		ui::Element* FatherElement = nullptr;
-		ui::Layout* FatherLayout = &ui::mainwin.layout;
+		ui::Layout* FatherLayout = nullptr;
 		std::stack<ui::Element*> FatherElementStack;
 		std::stack<ui::Layout*> FatherLayoutStack;
 		void BeginAddElement(ui::Element* ele) {
@@ -6628,7 +6644,7 @@ namespace ggcc {
 			}
 		}
 		ui::Element* GetFatherElement() {
-			if (FatherElementStack.empty())BeginAddElement(&ui::mainintf);
+			if (FatherElementStack.empty())BeginAddElement(&ui::mainwin);
 			return FatherElement;
 		}
 		void BeginLayout(ui::Layout* ele) {
@@ -6645,7 +6661,7 @@ namespace ggcc {
 			}
 		}
 		ui::Layout* GetFatherLayout() {
-			if (FatherLayoutStack.empty())BeginLayout(&ui::mainwin.layout);
+			if (FatherLayoutStack.empty())return nullptr;
 			return FatherLayout;
 		}
 		template<typename Func>
@@ -6655,59 +6671,40 @@ namespace ggcc {
 			EndAddElement();
 		}
 		template<typename Func>
-		void BeginWindow(std::string title, int x, int y, int w, int h, Func func) {
+		void Window(std::string title, int x, int y, int w, int h, Func func) {
 			ui::Window* win = new ui::Window(title, x, y, w, h, ui::auto_release);
-			BeginLayout(&win->layout);
+			BeginAddElement(win);
 			func();
-			EndLayout();
+			EndAddElement();
 		}
 		template<typename Func>
-		void BeginLeft(ui::Element* ele, realn pos, Func func) {
+		void BeginLeft(ui::Element* ele, realn pos) {
 			GetFatherLayout()->split = pos;
-			GetFatherLayout()->Split(ui::split_row, ele, GetFatherLayout()->Intf2());
+			GetFatherLayout()->Split(ui::split_row, ele, GetFatherLayout()->page2());
 			BeginLayout(GetFatherLayout()->lo1);
-			BeginAddElement(ele);
-			func();
-			EndAddElement();
 			EndLayout();
 		}
-		template<typename Func>
-		void BeginRight(ui::Element* ele, realn pos, Func func) {
+		void BeginRight(ui::Element* ele, realn pos) {
 			GetFatherLayout()->split = 1 - pos;
-			GetFatherLayout()->Split(ui::split_row, GetFatherLayout()->Intf1(), ele);
+			GetFatherLayout()->Split(ui::split_row, GetFatherLayout()->page1(), ele);
 			BeginLayout(GetFatherLayout()->lo2);
-			BeginAddElement(ele);
-			func();
-			EndAddElement();
 			EndLayout();
 		}
-		template<typename Func>
-		void BeginMain(ui::Element* ele, Func func) {
-			GetFatherLayout()->intf = ele;
+		void BeginMain(ui::Element* ele) {
+			GetFatherLayout()->Set(ele);
 			BeginLayout(GetFatherLayout());
-			BeginAddElement(ele);
-			func();
-			EndAddElement();
 			EndLayout();
 		}
-		template<typename Func>
-		void BeginTop(ui::Element* ele, realn pos, Func func) {
+		void BeginTop(ui::Element* ele, realn pos) {
 			GetFatherLayout()->split = pos;
-			GetFatherLayout()->Split(ui::split_col, ele, GetFatherLayout()->Intf2());
+			GetFatherLayout()->Split(ui::split_col, ele, GetFatherLayout()->page2());
 			BeginLayout(GetFatherLayout()->lo1);
-			BeginAddElement(ele);
-			func();
-			EndAddElement();
 			EndLayout();
 		}
-		template<typename Func>
-		void BeginBottom(ui::Element* ele, realn pos, Func func) {
+		void BeginBottom(ui::Element* ele, realn pos) {
 			GetFatherLayout()->split = 1 - pos;
-			GetFatherLayout()->Split(ui::split_col, GetFatherLayout()->Intf1(), ele);
+			GetFatherLayout()->Split(ui::split_col, GetFatherLayout()->page1(), ele);
 			BeginLayout(GetFatherLayout()->lo2);
-			BeginAddElement(ele);
-			func();
-			EndAddElement();
 			EndLayout();
 		}
 		ui::Text &Text(std::string text) {
@@ -6800,8 +6797,13 @@ namespace ggcc {
 			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			return *temp;
 		}
-		ui::Interface &Interface() {
-			ui::Interface* temp = new ui::Interface;
+		template<typename Func>
+		ui::Page &Page(Func fun = nullptr) {
+			ui::Page* temp = new ui::Page;
+			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
+			BeginAddElement(temp);
+			if(fun)fun();
+			EndAddElement();
 			return *temp;
 		}
 		ui::Box &Box() {
@@ -6811,6 +6813,7 @@ namespace ggcc {
 		}
 		ui::MultiTab &MultiTab() {
 			ui::MultiTab* temp = new ui::MultiTab;
+			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			return *temp;
 		}
 		
