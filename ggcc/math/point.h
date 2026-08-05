@@ -4,7 +4,11 @@
 #ifndef __GGCCMATHPOINT_H__
 #define __GGCCMATHPOINT_H__
 
-#include <bits/stdc++.h>
+#include <cmath>
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <iomanip>
 
 using realn=long double;
 
@@ -25,8 +29,11 @@ namespace ggcc {
 		void operator -=(const realn &a);
 		void operator *=(const realn &a);
 		void operator /=(const realn &a);
-		point2d(realn X=0,realn Y=0) {
+		point2d(realn X,realn Y) {
 			x=X,y=Y;
+		}
+		point2d() {
+			x=0,y=0;
 		}
 		const point2d operator-() const {
 			return point2d(-x, -y);
@@ -46,8 +53,11 @@ namespace ggcc {
 		void operator -=(const realn &a);
 		void operator *=(const realn &a);
 		void operator /=(const realn &a);
-		point3d(realn X=0,realn Y=0,realn Z=0) {
+		point3d(realn X,realn Y,realn Z) {
 			x=X,y=Y,z=Z;
+		}
+		point3d() {
+			x=0,y=0,z=0;
 		}
 		const point3d operator-() const {
 			return point3d(-x, -y, -z);
@@ -83,10 +93,10 @@ namespace ggcc {
 
 	// 运算符重载
 	bool operator ==(const point2d& a,const point2d& b) {
-		return abs(a.x-b.x)<=0.0000001&&abs(a.y-b.y)<=0.0000001;
+		return fabs(a.x-b.x)<=0.0000001&&fabs(a.y-b.y)<=0.0000001;
 	}
 	bool operator ==(const point3d& a,const point3d& b) {
-		return abs(a.x-b.x)<=0.0000001&&abs(a.y-b.y)<=0.0000001&&abs(a.z-b.z)<=0.0000001;
+		return fabs(a.x-b.x)<=0.0000001&&fabs(a.y-b.y)<=0.0000001&&fabs(a.z-b.z)<=0.0000001;
 	}
 	bool operator ==(const point2d& a,const double& b) {
 		return a.x==0&&a.y==0&&b==0;
@@ -286,37 +296,37 @@ namespace ggcc {
 
 	// 距离函数
 	realn dis(point2d a,point2d b) {
-		realn dx=abs(a.x-b.x);
-		realn dy=abs(a.y-b.y);
+		realn dx=fabs(a.x-b.x);
+		realn dy=fabs(a.y-b.y);
 		return sqrt(dx*dx+dy*dy);
 	}
 	realn dis(point3d a,point3d b) {
-		realn dx=abs(a.x-b.x);
-		realn dy=abs(a.y-b.y);
-		realn dz=abs(a.z-b.z);
+		realn dx=fabs(a.x-b.x);
+		realn dy=fabs(a.y-b.y);
+		realn dz=fabs(a.z-b.z);
 		return sqrt(dx*dx+dy*dy+dz*dz);
 	}
 	realn disx(point2d a,point2d b) {
-		return abs(a.x-b.x);
+		return fabs(a.x-b.x);
 	}
 	realn disx(point3d a,point3d b) {
-		return abs(a.x-b.x);
+		return fabs(a.x-b.x);
 	}
 	realn disy(point2d a,point2d b) {
-		return abs(a.y-b.y);
+		return fabs(a.y-b.y);
 	}
 	realn disy(point3d a,point3d b) {
-		return abs(a.y-b.y);
+		return fabs(a.y-b.y);
 	}
 	realn disz(point3d a,point3d b) {
-		return abs(a.z-b.z);
+		return fabs(a.z-b.z);
 	}
 	
 	// 夹角
 	realn VecAngle(point2d a,point2d b) {
-		realn ans=1.0*Dot(a,b)/Mod(a)/Mod(b);
-		if(ans<=-1)return G_PI;
-		else return acos(ans);
+		realn c=1.0*Dot(a,b)/Mod(a)/Mod(b);
+		realn s=1.0*Cross(a,b)/Mod(a)/Mod(b);
+		return atan2(s,c);
 	}  
 	realn VecAngle(point3d a,point3d b) {
 		realn c=1.0*Dot(a,b)/Mod(a)/Mod(b);
@@ -340,8 +350,11 @@ namespace ggcc {
 		if(Mod(a)==0)return {0,0};
 		return a/(1.0*Mod(a));
 	}
+	point2d VecUnit(realn deg) {
+		return point2d(cos(deg),sin(deg));
+	}
 	point3d VecUnit(point3d a) {
-		if(Mod(a)==0)return {0,0};
+		if(Mod(a)==0)return {0,0,0};
 		return a/(1.0*Mod(a));
 	}
 	
@@ -394,6 +407,14 @@ namespace ggcc {
 	}
 	point2d abs2rel(point2d p,point2d rfrc,point2d dir) {
 		return (p-rfrc).Rotate(-atan2(dir.y,dir.x));
+	}
+	
+	// 对称
+	point2d AxialSymmetry(point2d dir,point2d v) {
+		return v.Rotate(VecAngle(v,dir)*2);
+	}
+	point2d CentralSymmetry(point2d o,point2d v) {
+		return 2*o-v;
 	}
 
 	// 向量

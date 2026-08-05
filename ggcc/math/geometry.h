@@ -5,6 +5,7 @@
 #define __GGCCMATHGEOMETRY_H__
 
 #include <ggcc/math/point.h>
+#include <vector>
 
 namespace ggcc {
 	
@@ -27,7 +28,7 @@ namespace ggcc {
 		public:
 			vector2d pos = vector2d{0,0};					// 位置
 			realn rotate = 0;								// 旋转弧度
-			std::string type = "empty";							// 图形类型
+			std::string type = "empty";						// 图形类型
 			// 求支撑点
 			virtual vector2d Support(vector2d u) {
 				return pos;
@@ -39,6 +40,10 @@ namespace ggcc {
 			// 计算重心
 			virtual vector2d CalcCenter() {
 				return vector2d{0,0};
+			}
+			// 计算面积
+			virtual int CalcArea() {
+				return 0;
 			}
 			// 校准中心
 			virtual void CheckCenter() {
@@ -54,8 +59,15 @@ namespace ggcc {
 			}
 			// 绘制
 			virtual void Draw(ui::GraphDebugger* G,realn r,realn g,realn b,realn a);
+			virtual void DrawLines(ui::GraphDebugger* G,realn r,realn g,realn b,realn a);
 		};
 		
+		// 线段
+		class segment : public shape {
+			segment(vector2d p1, vector2d p2) {
+				
+			}
+		};
 		// 圆形
 		class circle : public shape {
 		public:
@@ -74,6 +86,7 @@ namespace ggcc {
 				return pos+VecUnit(u)*r;
 			}
 			void Draw(ui::GraphDebugger* G,realn r,realn g,realn b,realn a);
+			void DrawLines(ui::GraphDebugger* G,realn r,realn g,realn b,realn a);
 		};
 		// 椭圆形
 		class ellipse : public shape {
@@ -103,6 +116,7 @@ namespace ggcc {
 				return Abs(vector2d(x,y));
 			}
 			void Draw(ui::GraphDebugger* G,realn r,realn g,realn b,realn a);
+			void DrawLines(ui::GraphDebugger* G,realn r,realn g,realn b,realn a);
 		};
 		// 多边形
 		class polygon : public shape {
@@ -140,6 +154,7 @@ namespace ggcc {
 				return Abs(p[maxp]);
 			}
 			void Draw(ui::GraphDebugger* G,realn r,realn g,realn b,realn a);
+			void DrawLines(ui::GraphDebugger* G,realn r,realn g,realn b,realn a);
 		};
 		// 矩形
 		class rectangle : public polygon {

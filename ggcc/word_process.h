@@ -4,7 +4,11 @@
 #ifndef GGCC_WORD_PROCESS_H
 #define GGCC_WORD_PROCESS_H
 
-#include <bits/stdc++.h>
+#include <string>
+#include <sstream>
+#include <map>
+#include <cmath>
+#include <vector>
 
 namespace ggcc {
 	namespace wp {
