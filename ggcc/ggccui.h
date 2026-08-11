@@ -21,6 +21,7 @@
 #include <functional>
 #include <fstream>
 #include <string.h>
+#include <algorithm>
 
 namespace ggcc {
 
@@ -368,19 +369,21 @@ namespace ggcc {
 			return Color{(unsigned char)(color.r), (unsigned char)(color.g), (unsigned char)(color.b), (unsigned char)(color.a*a*GetAlpha())};
 		}
 		int Char2Int(char a) {
-			if(isalpha(a))return a-'A'+10;
-			return a-'0';
+			if (isalpha(a))return a - 'A' + 10;
+			return a - '0';
 		}
 		Color ColorF(std::string str) {
-			if(str.size()==7) {
+			if (str.size() == 7) {
 				int r = (Char2Int(str[1]) << 4) | Char2Int(str[2]);
 				int g = (Char2Int(str[3]) << 4) | Char2Int(str[4]);
 				int b = (Char2Int(str[5]) << 4) | Char2Int(str[6]);
-				return Color {r,g,b,255};
+				return Color {r, g, b, 255};
 			}
 			return WHITE;
 		}
 		Color MixColor(Color c1, Color c2, realn k) {
+			if (k > 1)k = 1;
+			if (k < 0)k = 0;
 			return Color{c1.r*k + c2.r*(1.0 - k), c1.g*k + c2.g*(1.0 - k), c1.b*k + c2.b*(1.0 - k), 255};
 		}
 		// 其他功能
@@ -778,7 +781,7 @@ namespace ggcc {
 			Color last_color[19];				// 上次配色方案
 			Color last_bgcolor;					// 上次背景色
 			int change_time = -2000;			// 更改时间
-			
+
 			// 根据当前配色获取背景色
 			Color GetBgColorT() {
 				if (ThemeID == 1)return Color {40, 44, 52, 255};
@@ -790,8 +793,8 @@ namespace ggcc {
 			}
 			Color GetBgColor() {
 				float t = (gclock() - change_time) / 500.0;
-				if(t>1) return GetBgColorT();
-				return last_bgcolor * (1-t) + GetBgColorT() *t;
+				if (t > 1) return GetBgColorT();
+				return last_bgcolor * (1 - t) + GetBgColorT() * t;
 			}
 			// 根据当前配色获取颜色
 			Color GetColorT(int type) {
@@ -804,14 +807,14 @@ namespace ggcc {
 			}
 			Color GetColor(int type) {
 				float t = (gclock() - change_time) / 500.0;
-				if(t>1) return GetColorT(type);
-				return last_color[type] * (1-t) + GetColorT(type) *t;
+				if (t > 1) return GetColorT(type);
+				return last_color[type] * (1 - t) + GetColorT(type) * t;
 			}
 			// 设置配色方案
 			void SetColorTheme(std::string theme) {
 				if (theme == ThemeName)return;
 				ThemeName = theme;
-				for (int type=0;type<19;type++)last_color[type] = GetColorT(type);
+				for (int type = 0; type < 19; type++)last_color[type] = GetColorT(type);
 				last_bgcolor = GetBgColorT();
 				if (theme == "One Dark")ThemeID = 1;
 				if (theme == "MoLo CodeBlack")ThemeID = 2;
@@ -2415,7 +2418,7 @@ namespace ggcc {
 					DrawRectangle(x, y, w, h, ColorF(ChooseColor));
 					if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && check) {
 						click = true;
-						if(callback)callback();
+						if (callback)callback();
 					}
 					if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))DrawRectangle(x, y, w, h, ColorF(ChooseColor));
 				}
@@ -2852,7 +2855,7 @@ namespace ggcc {
 			}
 			int Draw(int x, int y, int w, bool check = true) {
 				Height = 0;
-				if(w>max_width&&max_width!=-1)w=max_width;
+				if (w > max_width && max_width != -1)w = max_width;
 				X = x, Y = y, W = w, CHECK = check;
 				swapping = false;
 				for (int i = 0; i < key.size(); i++)Height += key[i]->height;
@@ -2871,6 +2874,7 @@ namespace ggcc {
 			bool choose = false;
 			bool mouse_move = false;
 			bool movable = true;
+			bool ctrl_to_move = false;
 			realn zoom = 100;
 			realn startx, starty, endx, endy;
 			realn mesh_startx, mesh_starty, mesh_endx, mesh_endy;
@@ -2894,7 +2898,7 @@ namespace ggcc {
 			bool number_visible = true;
 			bool mesh_limit = false;
 			realn move_threshold_dist = 5 * ui::dpi;
-			realn move_threshold_time = 0.3;
+			realn move_threshold_time = 0.05;
 
 			GraphDebugger(std::function<void()> DrawFun = nullptr) {
 				zoom_ani.sd(300);
@@ -2978,7 +2982,7 @@ namespace ggcc {
 				return S2W(vector2d{Mouse.x - X, Mouse.y - Y});
 			}
 			bool MouseRelease(MouseButton mb) {
-				if (mb != MOUSE_BUTTON_LEFT) return IsMouseButtonReleased(mb) && CHECK && MouseInRect(X, Y, W, H);
+				if (mb != MOUSE_BUTTON_LEFT || (ctrl_to_move && !IsKeyDown(KEY_LEFT_CONTROL))) return IsMouseButtonReleased(mb) && CHECK && MouseInRect(X, Y, W, H);
 				return IsMouseButtonReleased(mb) && !mouse_move && CHECK && MouseInRect(X, Y, W, H);
 			}
 			bool MousePressed(MouseButton mb) {
@@ -3048,6 +3052,9 @@ namespace ggcc {
 				if (x2 < startx || x1 > endx || y2 < starty || y1 > endy)return false;
 				else return true;
 			}
+			inline bool in_sight(vector2d v1, vector2d v2) {
+				return in_sight(v1.x, v1.y, v2.x, v2.y);
+			}
 			void text(realn x, realn y, std::string text_, Color color = GREEN) {
 				color = ColorF(color);
 				if (!in_sight(x, y))return;
@@ -3056,6 +3063,15 @@ namespace ggcc {
 			}
 			void text(vector2d pos, std::string text_, Color color = GREEN) {
 				text(pos.x, pos.y, text_, color);
+			}
+			void raylib_text(vector2d pos, std::string text_, realn size = 1.0, Color color = GREEN) {
+				pos = W2S(pos) + vector2d(X, Y);
+				int size2 = W2S(size);
+				int len = MeasureText(text_.c_str(), size2);
+				DrawText(text_.c_str(), pos.x - len / 2, pos.y - size2 / 2, size2, color);
+			}
+			void raylib_text(realn x, realn y, std::string text_, realn size = 1.0, Color color = GREEN) {
+				raylib_text(vector2d(x, y), text_, size, color);
 			}
 			void point(realn x, realn y, Color color = GREEN) {
 				color = ColorF(color);
@@ -3138,6 +3154,7 @@ namespace ggcc {
 				color = ColorF(color);
 				if (x1 > x2)std::swap(x1, x2);
 				if (y1 < y2)std::swap(y1, y2);
+				if (x1 > endx || x2 < startx || y2 > endy || y1 < starty) return;
 				a = W2S({x1, y1}), b = W2S({x2, y2});
 				DrawRectangleLines(a.x + X, a.y + Y, b.x - a.x, b.y - a.y, color);
 			}
@@ -3145,6 +3162,7 @@ namespace ggcc {
 				color = ColorF(color);
 				if (x1 > x2)std::swap(x1, x2);
 				if (y1 < y2)std::swap(y1, y2);
+				if (x1 > endx || x2 < startx || y2 > endy || y1 < starty) return;
 				a = W2S({x1, y1}), b = W2S({x2, y2});
 				if (b.x - a.x >= 4 * ui::dpi && b.y - a.y >= 4 * ui::dpi) {
 					color2 = color;
@@ -3162,6 +3180,7 @@ namespace ggcc {
 				color = ColorF(color);
 				if (x1 > x2)std::swap(x1, x2);
 				if (y1 < y2)std::swap(y1, y2);
+				if (x1 > endx || x2 < startx || y2 > endy || y1 < starty) return;
 				a = W2S({x1, y1}), b = W2S({x2, y2});
 				DrawRectangle(round(a.x + X), round(a.y + Y), round(b.x) - round(a.x), round(b.y) - round(a.y), color);
 			}
@@ -3271,7 +3290,7 @@ namespace ggcc {
 				arc(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, color);
 			}
 			void arc(vector2d o, realn r, realn start, realn end, Color color = GREEN) {
-				DrawRingLines(_V(W2S(o)+vector2d(X,Y)), r * zoom, r * zoom, start - 90, end - 90, 50, ColorF(color));
+				DrawRingLines(_V(W2S(o) + vector2d(X, Y)), r * zoom, r * zoom, start - 90, end - 90, 50, ColorF(color));
 			}
 			void arc_controlled(vector2d *p1, vector2d *p2, vector2d *p3, Color color = GREEN) {
 				arc(*p1, *p2, *p3, color);
@@ -3576,34 +3595,36 @@ namespace ggcc {
 
 				if (movable) {
 					if (MouseInRect(x, y, w, h))UseSliderX = UseSliderY = true;
-					if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+					if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || (IsKeyPressed(KEY_LEFT_CONTROL) && ctrl_to_move)) {
 						click_time = GetTime();
-						if (MouseInRect(x, y, w, h) && check && !ChooseSlider != NULL) {
-							choose = true;
-							choose_pos = S2W(_v(Mouse) - vector2d{x, y});
+						if (!ctrl_to_move || IsKeyDown(KEY_LEFT_CONTROL)) {
+							if (MouseInRect(x, y, w, h) && check && !ChooseSlider != NULL) {
+								choose = true;
+								choose_pos = S2W(_v(Mouse) - vector2d{x, y});
+							}
 						}
 					}
 					if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT) && check)choose = false;
 					vector2d move = S2W(_v(Mouse) - vector2d{x, y}) - choose_pos;
 					if (choose && !ChooseSlider != NULL && check) {
-						if (Mod(_v(Mouse) - last_mouse_pos) > move_threshold_dist)camera -= move;
+						if (Mod(_v(Mouse) - last_mouse_pos) > move_threshold_dist || GetTime() - click_time > move_threshold_time)camera -= move;
 						startx = S2W({0, 0}).x, endx = S2W({w, 0}).x;
 						starty = S2W({0, h}).y, endy = S2W({0, 0}).y;
 						O = W2S({0, 0});
 					}
-					if (Mod(_v(Mouse) - last_mouse_pos) >= move_threshold_dist)mouse_move = true;
+					if (Mod(_v(Mouse) - last_mouse_pos) >= move_threshold_dist || GetTime() - click_time > move_threshold_time)mouse_move = true;
 					else mouse_move = false;
-					if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !IsMouseButtonDown(MOUSE_BUTTON_RIGHT))last_mouse_pos = _v(Mouse);
+					if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) last_mouse_pos = _v(Mouse);
 				} else mouse_move = false;
 
 				if (mesh_visible) {
 					if (sspace / 10.0 > 10 * dpi) {
-							realn a = (sspace / 10 - 10 * dpi) / (20.0 * dpi);
-							if (std::ceil(log10(30 * dpi / zoom)) >= mesh_min + 1) DrawMesh_(sspace / 10, Color{60, 60, 60, a * 255});
-							if (std::ceil(log10(30 * dpi / zoom)) >= mesh_min) DrawMesh_(sspace, Color{60 + 60 * a, 60 + 60 * a, 60 + 60 * a, 255}, true);
-							if (std::ceil(log10(30 * dpi / zoom)) >= mesh_min - 1) DrawMesh_(sspace * 10, Color{120 + 60 * a, 120 + 60 * a, 120 + 60 * a, 255});
+						realn a = (sspace / 10 - 10 * dpi) / (20.0 * dpi);
+						if (std::ceil(log10(30 * dpi / zoom)) >= mesh_min + 1) DrawMesh_(sspace / 10, Color{60, 60, 60, a * 255});
+						if (std::ceil(log10(30 * dpi / zoom)) >= mesh_min) DrawMesh_(sspace, Color{60 + 60 * a, 60 + 60 * a, 60 + 60 * a, 255}, number_visible);
+						if (std::ceil(log10(30 * dpi / zoom)) >= mesh_min - 1) DrawMesh_(sspace * 10, Color{120 + 60 * a, 120 + 60 * a, 120 + 60 * a, 255});
 					} else {
-						if (std::ceil(log10(30 * dpi / zoom)) >= mesh_min) DrawMesh_(sspace, Color{60, 60, 60, 255}, true);
+						if (std::ceil(log10(30 * dpi / zoom)) >= mesh_min) DrawMesh_(sspace, Color{60, 60, 60, 255}, number_visible);
 						if (std::ceil(log10(30 * dpi / zoom)) >= mesh_min - 1) DrawMesh_(sspace * 10, Color{120, 120, 120, 255});
 					}
 				}
@@ -3619,7 +3640,7 @@ namespace ggcc {
 				else zoom_ani.stp(zoom_slider.num);
 				if (draw_fun != nullptr) {
 					BeginScissor(X, Y, W, H);
-					plot=this;
+					plot = this;
 					draw_fun();
 					EndScissor();
 				}
@@ -4370,7 +4391,7 @@ namespace ggcc {
 				return Copy({0, 0}, {input[input.size() - 1].size(), input.size() - 1});
 			}
 			std::string CopySelect() {
-				return Copy(choose_pos1,choose_pos2);
+				return Copy(choose_pos1, choose_pos2);
 			}
 			bool IsSelect() {
 				return choose_word_on;
@@ -4947,7 +4968,7 @@ namespace ggcc {
 					}
 					background_color = highlight::GetBgColor();
 				}
-				ipx.update(),ipy.update();
+				ipx.update(), ipy.update();
 				// 输入框为空，则绘制提示文本
 				if (input.size() == 1 && input[0].size() == 0) {
 					Print(tempx, tempy + tempH, content, GRAY);
@@ -5213,7 +5234,7 @@ namespace ggcc {
 				{x + SpaceSize + TextHeight + wi / 2 - move.gnp()*wi / 2, y + h + TextHeight},
 				{x + SpaceSize + TextHeight + wi / 2 + move.gnp()*wi / 2, y + h + TextHeight},
 				dpi, ColorF(177, 164, 246, 255)
-				        );
+				         );
 				if (MouseInRect(x + TextHeight + SpaceSize, y, wp::strLen(content) * TextHeight / 2, UnitHeight)) {
 					move.stp(1);
 					MouseCursorStyle = MOUSE_CURSOR_POINTING_HAND;
@@ -5347,7 +5368,7 @@ namespace ggcc {
 				return *this;
 			}
 			Pulldown& AddMenu(std::string content, Pulldown* temp = nullptr, ReleaseFunc fun = nullptr) {
-				if(temp) {
+				if (temp) {
 					Add(temp, fun);
 					temp->content = content;
 					type.resize(Size());
@@ -5420,7 +5441,7 @@ namespace ggcc {
 				Height = 0;
 				Width = 0;
 				for (int i = 0; i < key.size(); i++) {
-					if(!key[i])continue;
+					if (!key[i])continue;
 					if (type[i] == 2) {
 						Height += UnitHeight;
 						Width = std::max(Width, key[i]->width);
@@ -5470,7 +5491,7 @@ namespace ggcc {
 						}
 						nowh += key[i]->Draw_Auto(x + SpaceSize * 2, y + nowh, w - SpaceSize * 4, next_check);
 					} else if (type[i] == 2) {
-						if(!menu[i])continue;
+						if (!menu[i])continue;
 						Print(x + SpaceSize * 3 + TextHeight, y + nowh + (UnitHeight - TextHeight) / 2, menu[i]->content);
 						Print(x + w - SpaceSize * 2 - TextHeight / 2, y + nowh + (UnitHeight - TextHeight) / 2, ">", LineColor);
 						menu[i]->SetPos(x + w + SpaceSize, y + nowh);
@@ -5576,7 +5597,7 @@ namespace ggcc {
 				return *this;
 			}
 			BottomMenu& AddButton(std::string content, Color color = DARKGRAY) {
-				return AddButton("",content,color);
+				return AddButton("", content, color);
 			}
 			BottomMenu& withCallback(std::function<void()> callback_) {
 				callback[callback.size() - 1] = callback_;
@@ -5589,14 +5610,14 @@ namespace ggcc {
 				click = -1;
 				DrawRectangle(x, y, w, h, ColorF(35, 35, 35, 255));
 				DrawLineEx({x, y + dpi / 2}, {x + w, y + dpi / 2}, dpi, ColorF(255, 255, 255, 30));
-				int t = (Height-UnitHeight*1.3)/2;
+				int t = (Height - UnitHeight * 1.3) / 2;
 				int width = t;
 				for (int i = 0; i < button.size(); i++) {
 					int k = std::max(button[i].GetWidth(), UnitHeight * 4);
 					button[i].Draw_Auto_Extra(x + w - width - k, y + t, k, UnitHeight * 1.3);
 					if (button[i].click) {
 						click = i;
-						if(callback[i])callback[i]();
+						if (callback[i])callback[i]();
 					}
 					width += k + SpaceSize;
 				}
@@ -5952,7 +5973,7 @@ namespace ggcc {
 				}
 				if (w - width[id] < moveAni.gnp())moveAni.stp(w - width[id]);
 				if (w > moveAni.gnp() + W)moveAni.stp(w - W);
-				
+
 				return *this;
 			}
 			int DrawOne(int id, int x, int y, int w, int h, bool check = true) {
@@ -6102,7 +6123,7 @@ namespace ggcc {
 				title = title_;
 				extra = true;
 				SetReleaseFunc(fun);
-				xani.ssp(WindowPos.x),yani.ssp(WindowPos.y);
+				xani.ssp(WindowPos.x), yani.ssp(WindowPos.y);
 				pop = true;
 			}
 			Window& Set(Element* ele) {
@@ -6159,15 +6180,15 @@ namespace ggcc {
 				if (x + W > winW)x = winW - w;
 				if (y + H > winH)y = winH - h;
 				rel_x = x, rel_y = y;
-				xani.stp(x+WindowPos.x),yani.stp(y+WindowPos.y),wani.stp(w),hani.stp(h);
+				xani.stp(x + WindowPos.x), yani.stp(y + WindowPos.y), wani.stp(w), hani.stp(h);
 				return *this;
 			}
-			Window &SetSize(int w,int h) {
+			Window &SetSize(int w, int h) {
 				if (w < 100 * dpi)w = 100 * dpi;
 				if (h < title_height)h = title_height;
 				if (w > winW)w = winW;
 				if (h > winH)h = winH;
-				wani.stp(w),hani.stp(h);
+				wani.stp(w), hani.stp(h);
 				return *this;
 			}
 			Window& GotoMid() {
@@ -6185,9 +6206,9 @@ namespace ggcc {
 					if (WindowState == state_moving) {
 						xani.gt(rel_x + WindowPos.x);
 						yani.gt(rel_y + WindowPos.y);
-				 	}
+					}
 				}
-				xani.update(),yani.update(),wani.update(),hani.update();
+				xani.update(), yani.update(), wani.update(), hani.update();
 				darkani.update();
 				rel_x = x = xani.gnp() - WindowPos.x;
 				rel_y = y = yani.gnp() - WindowPos.y;
@@ -6263,7 +6284,7 @@ namespace ggcc {
 				int tx = x, ty = y, tw = w, th = h;
 
 				// 绘制界面
-				if(!key.empty()&&key[0])key[0]->Draw_Auto_Extra(sider.X, sider.Y, sider.W, sider.H, check && (!(rx || ry || rw || rh) | !IsMouseButtonDown(MOUSE_BUTTON_LEFT)));
+				if (!key.empty() && key[0])key[0]->Draw_Auto_Extra(sider.X, sider.Y, sider.W, sider.H, check && (!(rx || ry || rw || rh) | !IsMouseButtonDown(MOUSE_BUTTON_LEFT)));
 				EndScissor();
 
 				// 绘制标题
@@ -6746,7 +6767,7 @@ namespace ggcc {
 		ui::Window& Window(std::string title, std::function<void()> func = nullptr) {
 			ui::Window* win = new ui::Window(title, ui::auto_release);
 			BeginAddElement(win);
-			if(func)func();
+			if (func)func();
 			EndAddElement();
 			return *win;
 		}
@@ -6849,11 +6870,11 @@ namespace ggcc {
 			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			return *temp;
 		}
-		ui::Collapse &Collapse(std::string content = "Collapse",std::function<void()> fun = nullptr) {
+		ui::Collapse &Collapse(std::string content = "Collapse", std::function<void()> fun = nullptr) {
 			ui::Collapse* temp = new ui::Collapse(content);
 			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			BeginAddElement(temp);
-			if(fun)fun();
+			if (fun)fun();
 			EndAddElement();
 			return *temp;
 		}
@@ -6876,7 +6897,7 @@ namespace ggcc {
 			ui::Page* temp = new ui::Page;
 			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			BeginAddElement(temp);
-			if(fun)fun();
+			if (fun)fun();
 			EndAddElement();
 			return *temp;
 		}

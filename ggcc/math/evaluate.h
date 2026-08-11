@@ -7,10 +7,11 @@
 #include <map>
 #include <string>
 #include <functional>
+#include <unordered_map>
 
 namespace ggcc {
 
-	double eval(std::string str, std::unordered_map<std::string, double> para) {
+	double eval(std::string str, std::unordered_map<std::string, double> para = {}) {
 		static std::unordered_map<char, char> prio = {{'+', 1}, {'-', 1}, {'_', 1}, {'*', 2}, {'/', 2}, {'^', 3}};
 		static std::unordered_map<std::string, char> func = {
 			{"sin", 'A'}, {"cos", 'B'}, {"tan", 'C'}, {"asin", 'D'}, 
@@ -75,7 +76,7 @@ namespace ggcc {
 				if (optop && isalpha(op[--optop])) eval_func();
 			} else if (prio[str[i]]) {
 				if (str[i] == '-') {
-					register int j = i;
+					int j = i;
 					while(j) if (str[--j] != ' ') break;
 					if(str[j] == '(') str[i] = '_';
 				}
