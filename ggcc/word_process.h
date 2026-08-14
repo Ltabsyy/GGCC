@@ -256,36 +256,36 @@ namespace ggcc {
 			}
 			return str;
 		}
-		std::string Unicode_to_UTF8(uint32_t a) {  
-			std::string str;  
-			
-			// 处理 Unicode 范围内的码点  
-			if (a <= 0x7F) {  
-				// 单字节 UTF-8  
-				str += static_cast<char>(a);  
-			} else if (a <= 0x7FF) {  
-				// 双字节 UTF-8  
-				str += static_cast<char>((a >> 6) | 0xC0);  
-				str += static_cast<char>((a & 0x3F) | 0x80);  
-			} else if (a <= 0xFFFF) {  
-				// 三字节 UTF-8  
-				// 注意：这里排除了 U+D800 到 U+DFFF 的代理对区域  
-				if (a >= 0xD800 && a <= 0xDFFF) return ""; // 或者抛出异常  
-				str += static_cast<char>((a >> 12) | 0xE0);  
-				str += static_cast<char>(((a >> 6) & 0x3F) | 0x80);  
-				str += static_cast<char>((a & 0x3F) | 0x80);  
-			} else if (a <= 0x10FFFF) {  
-				// 四字节 UTF-8  
-				str += static_cast<char>((a >> 18) | 0xF0);  
-				str += static_cast<char>(((a >> 12) & 0x3F) | 0x80);  
-				str += static_cast<char>(((a >> 6) & 0x3F) | 0x80);  
-				str += static_cast<char>((a & 0x3F) | 0x80);  
-			} else {  
-				// 超出 Unicode 范围，返回空字符串或抛出异常  
-				return ""; // 或者 throw std::out_of_range("Unicode code point out of range");  
-			}  
-			
-			return str;  
+		std::string Unicode_to_UTF8(uint32_t a) {
+			std::string str;
+
+			// 处理 Unicode 范围内的码点
+			if (a <= 0x7F) {
+				// 单字节 UTF-8
+				str += static_cast<char>(a);
+			} else if (a <= 0x7FF) {
+				// 双字节 UTF-8
+				str += static_cast<char>((a >> 6) | 0xC0);
+				str += static_cast<char>((a & 0x3F) | 0x80);
+			} else if (a <= 0xFFFF) {
+				// 三字节 UTF-8
+				// 注意：这里排除了 U+D800 到 U+DFFF 的代理对区域
+				if (a >= 0xD800 && a <= 0xDFFF) return ""; // 或者抛出异常
+				str += static_cast<char>((a >> 12) | 0xE0);
+				str += static_cast<char>(((a >> 6) & 0x3F) | 0x80);
+				str += static_cast<char>((a & 0x3F) | 0x80);
+			} else if (a <= 0x10FFFF) {
+				// 四字节 UTF-8
+				str += static_cast<char>((a >> 18) | 0xF0);
+				str += static_cast<char>(((a >> 12) & 0x3F) | 0x80);
+				str += static_cast<char>(((a >> 6) & 0x3F) | 0x80);
+				str += static_cast<char>((a & 0x3F) | 0x80);
+			} else {
+				// 超出 Unicode 范围，返回空字符串或抛出异常
+				return ""; // 或者 throw std::out_of_range("Unicode code point out of range");
+			}
+
+			return str;
 		}
 		int UTF8_Unicode(std::string a) {
 			if (a.size() == 0)return 0;
@@ -318,35 +318,35 @@ namespace ggcc {
 			}
 			return 0;
 		}
-		uint32_t UTF8_to_Unicode(const std::string& a) {  
-			if (a.empty()) return 0;  
-			
-			// 处理 ASCII 字符  
-			if (a.size() == 1 && static_cast<unsigned char>(a[0]) < 0x80) {  
-				return static_cast<unsigned char>(a[0]);  
-			}  
-			
-			// 验证 UTF-8 字节序列的起始字节  
-			unsigned char firstByte = static_cast<unsigned char>(a[0]);  
-			if ((firstByte & 0xF8) == 0xF0) { // 4 字节 UTF-8  
-				if (a.size() < 4) return 0; // 长度不足  
-				return ((firstByte & 0x07) << 18) |  
-				((static_cast<unsigned char>(a[1]) & 0x3F) << 12) |  
-				((static_cast<unsigned char>(a[2]) & 0x3F) << 6) |  
-				(static_cast<unsigned char>(a[3]) & 0x3F);  
-			} else if ((firstByte & 0xF0) == 0xE0) { // 3 字节 UTF-8  
-				if (a.size() < 3) return 0; // 长度不足  
-				return ((firstByte & 0x0F) << 12) |  
-				((static_cast<unsigned char>(a[1]) & 0x3F) << 6) |  
-				(static_cast<unsigned char>(a[2]) & 0x3F);  
-			} else if ((firstByte & 0xE0) == 0xC0) { // 2 字节 UTF-8  
-				if (a.size() < 2) return 0; // 长度不足  
-				return ((firstByte & 0x1F) << 6) |  
-				(static_cast<unsigned char>(a[1]) & 0x3F);  
-			}  
-			
-			// 如果不匹配任何 UTF-8 编码模式，则返回 0 或抛出异常  
-			return 0;  
+		uint32_t UTF8_to_Unicode(const std::string& a) {
+			if (a.empty()) return 0;
+
+			// 处理 ASCII 字符
+			if (a.size() == 1 && static_cast<unsigned char>(a[0]) < 0x80) {
+				return static_cast<unsigned char>(a[0]);
+			}
+
+			// 验证 UTF-8 字节序列的起始字节
+			unsigned char firstByte = static_cast<unsigned char>(a[0]);
+			if ((firstByte & 0xF8) == 0xF0) { // 4 字节 UTF-8
+				if (a.size() < 4) return 0; // 长度不足
+				return ((firstByte & 0x07) << 18) |
+				((static_cast<unsigned char>(a[1]) & 0x3F) << 12) |
+				((static_cast<unsigned char>(a[2]) & 0x3F) << 6) |
+				(static_cast<unsigned char>(a[3]) & 0x3F);
+			} else if ((firstByte & 0xF0) == 0xE0) { // 3 字节 UTF-8
+				if (a.size() < 3) return 0; // 长度不足
+				return ((firstByte & 0x0F) << 12) |
+				((static_cast<unsigned char>(a[1]) & 0x3F) << 6) |
+				(static_cast<unsigned char>(a[2]) & 0x3F);
+			} else if ((firstByte & 0xE0) == 0xC0) { // 2 字节 UTF-8
+				if (a.size() < 2) return 0; // 长度不足
+				return ((firstByte & 0x1F) << 6) |
+				(static_cast<unsigned char>(a[1]) & 0x3F);
+			}
+
+			// 如果不匹配任何 UTF-8 编码模式，则返回 0 或抛出异常
+			return 0;
 		}
 		inline std::string GetChar(int a) {
 			return Unicode_to_UTF8(a);

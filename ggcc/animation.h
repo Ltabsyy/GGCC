@@ -4,8 +4,11 @@
 #ifndef __GGCCANIMATION_H__
 #define __GGCCANIMATION_H__
 
-#include <ggcc/math/point.h>
 #include <functional>
+#include <ctime>
+#include <cmath>
+
+using realn = long double;
 
 #ifdef __GGCCANIMATION_H_OLD__
 
@@ -199,12 +202,15 @@ namespace ggcc {
 
 #define MAXANIARRAY   128
 #define MAXANI 1024
+#include <iostream>
 
 namespace ggcc {
 
 	// 计时器
 	unsigned long long StartGClcok = 0;
 	unsigned long long LastUpdateGClock = 0;
+	long long LastRecordGClock = 0;
+	long long GClockInterval = 0;
 	bool GClockInited = false;
 	long long gclock() {
 		if (!GClockInited) {
@@ -234,6 +240,12 @@ namespace ggcc {
 			if (now - LastUpdateGClock > 100) StartGClcok += now - LastUpdateGClock - 16;
 			LastUpdateGClock = now;
 		}
+		long long tmp = gclock();
+		GClockInterval = tmp - LastRecordGClock;
+		LastRecordGClock = tmp;
+	}
+	long long gclock_interval() {
+		return GClockInterval;
 	}
 
 	// 动画函数
@@ -244,7 +256,7 @@ namespace ggcc {
 			std::function <realn(realn)> fun;	// 动画函数
 			realn startp;						// 动画起始点
 			realn endp;							// 动画终止点
-			anistruct(std::function <realn(realn)> f, realn start, realn end) {
+			AniPara(std::function <realn(realn)> f, realn start, realn end) {
 				fun = f;
 				startp = start;
 				endp = end;
@@ -317,7 +329,7 @@ namespace ggcc {
 	}
 
 	int AniTotal = 0;
-	int AniEnabled = 1;
+	bool AniEnabled = 1;
 	bool ContinuityCheck = true;
 
 	class Animation {
@@ -443,9 +455,8 @@ namespace ggcc {
 			} else if (!Repeat_ && Return_) {
 				if (x < Duration)return AniFun(x);
 				else if (x < Duration * 2 + ReturnDelay)return AniFun(2 * Duration + ReturnDelay - x);
-			} else {
-				return AniFun(x);
 			}
+			return AniFun(x);
 		}
 	};
 

@@ -9,6 +9,7 @@
 #include <cmath>
 #include <iostream>
 #include <algorithm>
+#include <complex>
 
 using realn = long double;
 
@@ -17,6 +18,175 @@ using realn = long double;
 #endif
 
 namespace ggcc {
+
+	// 颜色
+	namespace gc {
+
+		unsigned rgb(unsigned r, unsigned g, unsigned b) {
+			return (r << 16) | (g << 8) | b;
+		}
+		unsigned rgba(unsigned r, unsigned g, unsigned b, unsigned a) {
+			return (a << 24) | (r << 16) | (g << 8) | b;
+		}
+		unsigned fade(unsigned color, realn a) {
+			unsigned int alpha = (color >> 24);
+			alpha = alpha * a;
+			return (alpha << 24) | (color & 0x00ffffff);
+		}
+		const unsigned aliceBlue = 0xfff0f8ff,
+		               antiqueWhite = 0xfffaebd7,
+		               aqua = 0xff00ffff,
+		               aquamarine = 0xff7fffd4,
+		               azure = 0xfff0ffff,
+		               beige = 0xfff5f5dc,
+		               bisque = 0xffffe4c4,
+		               black = 0xff000000,
+		               blanchedAlmond = 0xffffebcd,
+		               blue = 0xff0000ff,
+		               blueViolet = 0xff8a2be2,
+		               brown = 0xffa52a2a,
+		               burlywood = 0xffdeb887,
+		               cadetBlue = 0xff5f9ea0,
+		               chartreuse = 0xff7fff00,
+		               chocolate = 0xffd2691e,
+		               coral = 0xffff7f50,
+		               cornflowerBlue = 0xff6495ed,
+		               cornsilk = 0xfffff8dc,
+		               crimson = 0xffdc143c,
+		               cyan = 0xff00ffff,
+		               darkBlue = 0xff00008b,
+		               darkCyan = 0xff008b8b,
+		               darkGoldenrod = 0xffb8860b,
+		               darkGray = 0xffa9a9a9,
+		               darkGreen = 0xff006400,
+		               darkKhaki = 0xffbdb76b,
+		               darkMagenta = 0xff8b008b,
+		               darkOliveGreen = 0xff556b2f,
+		               darkOrange = 0xffff8c00,
+		               darkOrchid = 0xff9932cc,
+		               darkRed = 0xff8b0000,
+		               darkSalmon = 0xffe9967a,
+		               darkSeaGreen = 0xff8fbc8f,
+		               darkSlateBlue = 0xff483d8b,
+		               darkSlateGray = 0xff2f4f4f,
+		               darkTurquoise = 0xff00ced1,
+		               darkViolet = 0xff9400d3,
+		               deepPink = 0xffff1493,
+		               deepSkyBlue = 0xff00bfff,
+		               dimGray = 0xff696969,
+		               dodgerBlue = 0xff1e90ff,
+		               firebrick = 0xffb22222,
+		               floralWhite = 0xfffffaf0,
+		               forestGreen = 0xff228b22,
+		               fuchsia = 0xffff00ff,
+		               gainsboro = 0xffdcdcdc,
+		               ghostWhite = 0xfff8f8ff,
+		               gold = 0xffffd700,
+		               goldenrod = 0xffdaa520,
+		               gray = 0xffbebebe,
+		               gray1 = 0xff1a1a1a,
+		               gray2 = 0xff333333,
+		               gray3 = 0xff4d4d4d,
+		               gray4 = 0xff666666,
+		               gray5 = 0xff7f7f7f,
+		               gray6 = 0xff999999,
+		               gray7 = 0xffb3b3b3,
+		               gray8 = 0xffcccccc,
+		               gray9 = 0xffe5e5e5,
+		               green = 0xff00ff00,
+		               greenYellow = 0xffadff2f,
+		               honeydew = 0xfff0fff0,
+		               hotPink = 0xffff69b4,
+		               indianRed = 0xffcd5c5c,
+		               indigo = 0xff4b0082,
+		               ivory = 0xfffffff0,
+		               khaki = 0xfff0e68c,
+		               lavender = 0xffe6e6fa,
+		               lavenderBlush = 0xfffff0f5,
+		               lawnGreen = 0xff7cfc00,
+		               lemonChiffon = 0xfffffacd,
+		               lightBlue = 0xffadd8e6,
+		               lightCoral = 0xfff08080,
+		               lightCyan = 0xffe0ffff,
+		               lightGoldenrod = 0xffeedd82,
+		               lightGoldenrodYellow = 0xfffafad2,
+		               lightGray = 0xffd3d3d3,
+		               lightGreen = 0xff90ee90,
+		               lightPink = 0xffffb6c1,
+		               lightSalmon = 0xffffa07a,
+		               lightSeaGreen = 0xff20b2aa,
+		               lightSkyBlue = 0xff87cefa,
+		               lightSlateBlue = 0xff8470ff,
+		               lightSlateGray = 0xff778899,
+		               lightSteelBlue = 0xffb0c4de,
+		               lightYellow = 0xffffffe0,
+		               lime = 0xff00ff00,
+		               limeGreen = 0xff32cd32,
+		               linen = 0xfffaf0e6,
+		               magenta = 0xffff00ff,
+		               maroon = 0xffb03060,
+		               mediumAquamarine = 0xff66cdaa,
+		               mediumBlue = 0xff0000cd,
+		               mediumOrchid = 0xffba55d3,
+		               mediumPurple = 0xff9370db,
+		               mediumSeaGreen = 0xff3cb371,
+		               mediumSlateBlue = 0xff7b68ee,
+		               mediumSpringGreen = 0xff00fa9a,
+		               mediumTurquoise = 0xff48d1cc,
+		               mediumVioletRed = 0xffc71585,
+		               midnightBlue = 0xff191970,
+		               mintCream = 0xfff5fffa,
+		               mistyRose = 0xffffe4e1,
+		               moccasin = 0xffffe4b5,
+		               navajoWhite = 0xffffdead,
+		               navy = 0xff000080,
+		               navyBlue = 0xff000080,
+		               oldLace = 0xfffdf5e6,
+		               olive = 0xff808000,
+		               oliveDrab = 0xff6b8e23,
+		               orange = 0xffffa500,
+		               orangeRed = 0xffff4500,
+		               orchid = 0xffda70d6,
+		               paleGoldenrod = 0xffeee8aa,
+		               paleGreen = 0xff98fb98,
+		               paleTurquoise = 0xffafeeee,
+		               paleVioletRed = 0xffdb7093,
+		               papayaWhip = 0xffffefd5,
+		               peachPuff = 0xffffdab9,
+		               peru = 0xffcd853f,
+		               pink = 0xffffc0cb,
+		               plum = 0xffdda0dd,
+		               powderBlue = 0xffb0e0e6,
+		               purple = 0xffa020f0,
+		               rebeccaPurple = 0xff663399,
+		               red = 0xffff0000,
+		               rosyBrown = 0xffbc8f8f,
+		               royalBlue = 0xff4169e1,
+		               saddleBrown = 0xff8b4513,
+		               salmon = 0xfffa8072,
+		               sandyBrown = 0xfff4a460,
+		               seaGreen = 0xff2e8b57,
+		               seashell = 0xfffff5ee,
+		               sienna = 0xffa0522d,
+		               silver = 0xffc0c0c0,
+		               skyBlue = 0xff87ceeb,
+		               slateBlue = 0xff6a5acd,
+		               slateGray = 0xff708090,
+		               snow = 0xfffffafa,
+		               springGreen = 0xff00ff7f,
+		               steelBlue = 0xff4682b4,
+		               teal = 0xff008080,
+		               thistle = 0xffd8bfd8,
+		               tomato = 0xffff6347,
+		               turquoise = 0xff40e0d0,
+		               violet = 0xffee82ee,
+		               violetRed = 0xffd02090,
+		               wheat = 0xfff5deb3,
+		               white = 0xffffffff,
+		               whiteSmoke = 0xfff5f5f5,
+		               yellow = 0xffffff00,
+		               yellowGreen = 0xff9acd32;
+	};
 
 	// 平面直角坐标系点
 	struct point2d {
@@ -30,9 +200,19 @@ namespace ggcc {
 		void operator *=(const realn &a);
 		void operator /=(const realn &a);
 		point2d(realn X, realn Y) : x(X), y(Y) {}
+		point2d(std::complex<double> p) : x(p.real()), y(p.imag()) {}
+		point2d(std::vector<realn>& v) : x(v[0]), y(v[1]) {}
 		point2d() : x(0), y(0) {}
 		const point2d operator-() const {
 			return point2d(-x, -y);
+		}
+		point2d& operator=(const std::complex<double>& p) {
+			x = p.real(), y = p.imag();
+			return *this;
+		}
+		point2d& operator=(const std::vector<realn>& p) {
+			x = p[0], y = p[1];
+			return *this;
 		}
 		const realn Arg() {		// 辐角
 			return atan2(y, x);
@@ -43,7 +223,7 @@ namespace ggcc {
 	// 空间直角坐标系点
 	struct point3d {
 		realn x = 0;				// （米m）
-		realn y = 0;				// （米m）
+		realn y = 0;				// （米m）f
 		realn z = 0;				// （米m）
 		void operator +=(const point3d &a);
 		void operator -=(const point3d &a);
@@ -52,24 +232,35 @@ namespace ggcc {
 		void operator -=(const realn &a);
 		void operator *=(const realn &a);
 		void operator /=(const realn &a);
-		point3d(realn X, realn Y, realn Z) {
-			x = X, y = Y, z = Z;
-		}
-		point3d() {
-			x = 0, y = 0, z = 0;
-		}
+		point3d(realn X, realn Y, realn Z) : x(X), y(Y), z(Z) {}
+		point3d(point2d p) : x(p.x), y(p.y), z(0) {}
+		point3d(std::vector<realn>& v) : x(v[0]), y(v[1]), z(v[2]) {}
+		point3d() : x(0), y(0), z(0) {}
 		const point3d operator-() const {
 			return point3d(-x, -y, -z);
+		}
+		point3d& operator=(const point2d& p) {
+			x = p.x, y = p.y, z = 0.0;
+			return *this;
+		}
+		point3d& operator=(const std::vector<realn>& p) {
+			x = p[0], y = p[1], z = p[2];
+			return *this;
 		}
 		point3d Rotate(point3d, realn); // 旋转
 	};
 
 	namespace pg {
-		point2d axisX = point2d(1, 0);
-		point2d axisY = point2d(0, 1);
-		point2d origin = point2d(0, 0);
+		const point2d axisX = point2d(1, 0);
+		const point2d axisY = point2d(0, 1);
+		const point2d origin = point2d(0, 0);
 	}
-	point3d axisZ = point3d(0, 0, 1);
+	namespace sg {
+		const point3d axisX = point3d(1, 0, 0);
+		const point3d axisY = point3d(0, 1, 0);
+		const point3d axisZ = point3d(0, 0, 1);
+		const point3d origin = point3d(0, 0, 0);
+	}
 
 	// 声明
 	point2d VecUnit(point2d);
@@ -339,6 +530,9 @@ namespace ggcc {
 		if (Mod(a) == 0)return {0, 0, 0};
 		return a / (1.0 * Mod(a));
 	}
+	point3d VecUnit(realn l, realn v) {
+		return point3d(cos(l) * cos(v), sin(l) * cos(v), sin(v));
+	}
 
 	// 投影
 	point2d operator >>(const point2d& a, const point2d& b) {
@@ -447,6 +641,7 @@ namespace ggcc {
 
 		public:
 			vector2d pos = vector2d{0, 0};					// 位置
+			vector2d bias = vector2d{0, 0};					// 重心偏移量
 			realn rotate = 0;								// 旋转弧度
 			// 获取形状类型
 			ShapeType GetShapeType() {
@@ -464,8 +659,16 @@ namespace ggcc {
 			virtual vector2d CalcCenter() {
 				return vector2d{0, 0};
 			}
+			// 偏移重心
+			void SetBias(vector2d bias_) {
+				bias = bias_;
+			}
 			// 计算面积
 			virtual realn CalcArea() {
+				return 0;
+			}
+			// 计算转动惯量
+			virtual realn CalcInertia() {
 				return 0;
 			}
 			// 校准中心
@@ -479,6 +682,22 @@ namespace ggcc {
 			// 相对位置
 			vector2d Rel(const vector2d& p) {
 				return abs2rel(p, pos, rotate);
+			}
+			// 运动
+			void MoveForward(realn dis) {
+				pos += VecUnit(rotate) * dis;
+			}
+			void TurnLeft(realn angle) {
+				rotate += angle;
+			}
+			void TurnRight(realn angle) {
+				rotate -= angle;
+			}
+			void FaceTo(vector2d target) {
+				rotate = (target - pos).Arg();
+			}
+			void FaceTo(realn target) {
+				rotate = target;
 			}
 			// 绘制
 			virtual void Draw(unsigned color) = 0;
@@ -535,7 +754,7 @@ namespace ggcc {
 				return ans;
 			}
 			vector2d CalcCenter() {
-				return (p1 + p2) / 2;
+				return (p1 + p2) / 2 + bias;
 			}
 			void CheckCenter() {
 				vector2d v = CalcCenter();
@@ -563,8 +782,11 @@ namespace ggcc {
 				ans.y2 = pos.y + r;
 				return ans;
 			}
+			realn CalcArea() override {
+				return G_PI * r * r;
+			}
 			vector2d CalcCenter() override {
-				return vector2d{0, 0};
+				return vector2d{0, 0} + bias;
 			}
 			void CheckCenter() override {
 				pos += CalcCenter();
@@ -606,7 +828,7 @@ namespace ggcc {
 				return ans;
 			}
 			vector2d CalcCenter() override {
-				return vector2d{0, 0};
+				return bias;
 			}
 			void CheckCenter() override {
 				pos += CalcCenter();
@@ -662,7 +884,7 @@ namespace ggcc {
 					ans += (p[0] + p[i] + p[i + 1]) * ds / 3;
 					s += ds;
 				}
-				return ans / s;
+				return ans / s + bias;
 			}
 			void CheckCenter() override {
 				vector2d temp = CalcCenter();
@@ -735,7 +957,7 @@ namespace ggcc {
 					ans += (p[0] + p[i] + p[i + 1]) * ds / 3;
 					s += ds;
 				}
-				return ans / s;
+				return ans / s + bias;
 			}
 			void CheckCenter() override {
 				vector2d temp = CalcCenter();
@@ -773,7 +995,7 @@ namespace ggcc {
 				return ans;
 			}
 			vector2d CalcCenter() override {
-				return (p1 + p2) / 2;
+				return (p1 + p2) / 2 + bias;
 			}
 			void CheckCenter() override {
 				vector2d v = CalcCenter();
@@ -785,15 +1007,16 @@ namespace ggcc {
 		// 矩形
 		class rectangle : public polygon {
 		private:
-			realn a, b;
 		public:
-			rectangle(vector2d _pos = vector2d{0, 0}, realn _a = 1, realn _b = 1) {
+			realn a, b;
+			rectangle(vector2d _pos, realn _a, realn _b) {
 				a = _a, b = _b, pos = _pos;
 				p.push_back({_a / 2, -_b / 2});
 				p.push_back({_a / 2, _b / 2});
 				p.push_back({-_a / 2, _b / 2});
 				p.push_back({-_a / 2, -_b / 2});
 			}
+			rectangle() {}
 			void Set(int a_, int b_) {
 				a = a_, b = b_;
 			}
@@ -845,17 +1068,17 @@ namespace ggcc {
 		std::vector <vector2d> ConvexHull(std::vector <vector2d> p) {
 			if (p.size() <= 2) return {};
 			// 按纵坐标排序
-			auto cmp1 = [] (const vector2d& a, const vector2d& b) -> const bool {return a.y < b.y;};
+			auto cmp1 = [] (const vector2d & a, const vector2d & b) -> const bool {return a.y < b.y;};
 			std::sort(p.begin(), p.end(), cmp1);
 			// 按张角排序
-			auto cmp2 = [&] (const vector2d& a, const vector2d& b) -> const bool {
+			auto cmp2 = [&] (const vector2d & a, const vector2d & b) -> const bool {
 				realn a1 = -VecAngle(a - p[0], pg::axisX);
 				realn a2 = -VecAngle(b - p[0], pg::axisX);
 				return a1 < a2;
 			};
 			std::sort(p.begin() + 1, p.end(), cmp2);
 			// 计算凸包
-			auto get_angle = [](const vector2d& v) -> const realn {
+			auto get_angle = [](const vector2d & v) -> const realn {
 				realn t = atan2(v.y, v.x);
 				if (t < 0) return t + PI * 2;
 				return t;
@@ -876,7 +1099,7 @@ namespace ggcc {
 			id.resize(top + 1);
 			return id;
 		}
-		
+
 		// 闵可夫斯基差
 		struct Minkowski_t {
 			vector2d m_body1;
@@ -1008,10 +1231,32 @@ namespace ggcc {
 				}
 				return cp;
 			}
-			
+
 		}
 
 	}
+
+	// 2D物理引擎
+	namespace pe {
+
+		// 物体
+		class Body {
+		public:
+			pg::shape* shape;
+			realn mass;
+			vector2d vel;
+			vector2d acc;
+			vector2d pos;
+		};
+
+		// 世界
+		class World {
+		public:
+
+		};
+
+	}
+
 }
 
 #endif
