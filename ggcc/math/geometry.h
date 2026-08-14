@@ -8,6 +8,7 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
+#include <algorithm>
 
 using realn = long double;
 
@@ -32,6 +33,9 @@ namespace ggcc {
 		point2d() : x(0), y(0) {}
 		const point2d operator-() const {
 			return point2d(-x, -y);
+		}
+		const realn Arg() {		// 辐角
+			return atan2(y, x);
 		}
 		point2d Rotate(realn);	// 旋转
 	};
@@ -258,16 +262,16 @@ namespace ggcc {
 	}
 
 	// 向量模
-	realn Mod(point2d a) {
+	realn Mod(const point2d& a) {
 		return sqrt(a.x*a.x + a.y*a.y);
 	}
-	realn Mod(point3d a) {
+	realn Mod(const point3d& a) {
 		return sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
 	}
-	realn Mod2(point2d a) {
+	realn Mod2(const point2d& a) {
 		return a.x*a.x + a.y*a.y;
 	}
-	realn Mod2(point3d a) {
+	realn Mod2(const point3d& a) {
 		return a.x*a.x + a.y*a.y + a.z*a.z;
 	}
 
@@ -300,14 +304,18 @@ namespace ggcc {
 	}
 
 	// 夹角
-	realn VecAngle(point2d a, point2d b) {
-		realn c = 1.0 * Dot(a, b) / Mod(a) / Mod(b);
-		realn s = 1.0 * Cross(a, b) / Mod(a) / Mod(b);
+	realn VecAngle(const point2d& a, const point2d& b) {
+		realn ma = Mod(a), mb = Mod(b);
+		if (ma == 0 || mb == 0) return 0;
+		realn c = 1.0 * Dot(a, b) / ma / mb;
+		realn s = 1.0 * Cross(a, b) / ma / mb;
 		return atan2(s, c);
 	}
-	realn VecAngle(point3d a, point3d b) {
-		realn c = 1.0 * Dot(a, b) / Mod(a) / Mod(b);
-		point3d z = Cross(a, b) / Mod(a) / Mod(b);
+	realn VecAngle(const point3d& a, const point3d& b) {
+		realn ma = Mod(a), mb = Mod(b);
+		if (ma == 0 || mb == 0) return 0;
+		realn c = 1.0 * Dot(a, b) / ma / mb;
+		point3d z = Cross(a, b) / ma / mb;
 		realn s = 1.0 * Mod(z);
 		if (s == 0)return atan2(s, c);
 		realn A, B, C, x1 = 0, y1 = 0, z1 = 0, x2 = a.x, y2 = a.y, z2 = a.z, x3 = b.x, y3 = b.y, z3 = b.y;
@@ -423,12 +431,13 @@ namespace ggcc {
 		// 图形类型
 		enum ShapeType {
 			shapetype_empty = 0,		// 空白图形
-			shapetype_segment = 1,		// 线段
-			shapetype_circle = 2,		// 圆形
-			shapetype_ellipse = 3,		// 椭圆形
-			shapetype_polygon = 4,		// 多边形
-			shapetype_roundpoly = 5,	// 圆角多边形
-			shapetype_capsule = 6		// 胶囊形
+			shapetype_point = 1,		// 点
+			shapetype_segment = 2,		// 线段
+			shapetype_circle = 3,		// 圆形
+			shapetype_ellipse = 4,		// 椭圆形
+			shapetype_polygon = 5,		// 多边形
+			shapetype_roundpoly = 6,	// 圆角多边形
+			shapetype_capsule = 7		// 胶囊形
 		};
 
 		// 平面图形
@@ -472,10 +481,30 @@ namespace ggcc {
 				return abs2rel(p, pos, rotate);
 			}
 			// 绘制
-			virtual void Draw(unsigned color);
-			virtual void DrawLines(unsigned color);
+			virtual void Draw(unsigned color) = 0;
+			virtual void DrawLines(unsigned color) = 0;
 		};
 
+		// 点
+		class point : public shape {
+		public:
+			point(vector2d pos_ = vector2d(0, 0)) {
+				type = shapetype_point;
+				pos = pos_;
+			}
+			vector2d Support(vector2d u) {
+				return pos;
+			}
+			aabb CalcAABB() {
+				return aabb{pos.x, pos.y, pos.x, pos.y};
+			}
+			vector2d CalcCenter() {
+				return pos;
+			}
+			void CheckCenter() {}
+			void Draw(unsigned color);
+			void DrawLines(unsigned color);
+		};
 		// 线段
 		class segment : public shape {
 		public:
@@ -485,14 +514,14 @@ namespace ggcc {
 				type = shapetype_segment;
 				p1 = p1_, p2 = p2_;
 			}
-			segment();
+			segment() {};
 			realn Length() {
 				return Mod(p1 - p2);
 			}
 			vector2d Support(vector2d u) {
 				u = u.Rotate(-rotate);
 				vector2d v = p2 - p1;
-				if (u * v) return Abs(p2);
+				if (u * v > 0) return Abs(p2);
 				return Abs(p1);
 			}
 			aabb CalcAABB() {
@@ -588,17 +617,20 @@ namespace ggcc {
 		// 多边形
 		class polygon : public shape {
 		protected:
-			realn r;
 			std::vector <vector2d> p;
 		public:
-			polygon() {}
-			polygon(vector2d _pos, int _n, realn _r) {
+			polygon(vector2d _pos, int _n, realn r) {
 				type = shapetype_polygon;
-				r = _r, pos = _pos;
+				pos = _pos;
 				vector2d v = {0, r};
 				for (int i = 0; i < _n; i++)p.push_back(v.Rotate(PI * 2 * i / _n));
 			}
-			polygon(std::vector<vector2d> p_) : p(p) {}
+			polygon(std::vector<vector2d>& p_) : p(p_) {
+				type = shapetype_polygon;
+			}
+			polygon() {
+				type = shapetype_polygon;
+			}
 			vector2d Support(vector2d u) override {
 				u = u.Rotate(-rotate);
 				realn maxn = Shadow(p[0], u);
@@ -658,7 +690,9 @@ namespace ggcc {
 				}
 			}
 		public:
-			roundpoly() {};
+			roundpoly() {
+				type = shapetype_roundpoly;
+			};
 			roundpoly(vector2d _pos, int _n, realn _r, realn roundness_) {
 				type = shapetype_roundpoly;
 				r = _r, pos = _pos, roundness = roundness_;
@@ -667,6 +701,7 @@ namespace ggcc {
 				CheckInnerP();
 			}
 			roundpoly(std::vector<vector2d> p_) : p(p) {
+				type = shapetype_roundpoly;
 				CheckInnerP();
 			}
 			vector2d Support(vector2d u) override {
@@ -720,7 +755,7 @@ namespace ggcc {
 				type = shapetype_capsule;
 				p1 = p1_, p2 = p2_, r = r_;
 			}
-			capsule();
+			capsule() {};
 			vector2d Support(vector2d u) override {
 				u = u.Rotate(-rotate);
 				vector2d v = p2 - p1;
@@ -768,7 +803,7 @@ namespace ggcc {
 		private:
 			realn a, b;
 		public:
-			roundrect(vector2d _pos = vector2d{0, 0}, realn _a = 1, realn _b = 1, realn roundness_= 0.5) {
+			roundrect(vector2d _pos = vector2d{0, 0}, realn _a = 1, realn _b = 1, realn roundness_ = 0.5) {
 				a = _a, b = _b, pos = _pos, roundness = roundness_;
 				p.push_back({_a / 2, -_b / 2});
 				p.push_back({_a / 2, _b / 2});
@@ -797,7 +832,7 @@ namespace ggcc {
 		private:
 			realn a, b;
 		public:
-			roundtriangle(vector2d p1 = {0, 0}, vector2d p2 = {1, 0}, vector2d p3 = {0, 1}, realn roundness_= 0.5) {
+			roundtriangle(vector2d p1 = {0, 0}, vector2d p2 = {1, 0}, vector2d p3 = {0, 1}, realn roundness_ = 0.5) {
 				roundness = roundness_;
 				p.push_back(p1);
 				p.push_back(p2);
@@ -806,33 +841,69 @@ namespace ggcc {
 			}
 		};
 
+		// 二维凸包
+		std::vector <vector2d> ConvexHull(std::vector <vector2d> p) {
+			if (p.size() <= 2) return {};
+			// 按纵坐标排序
+			auto cmp1 = [] (const vector2d& a, const vector2d& b) -> const bool {return a.y < b.y;};
+			std::sort(p.begin(), p.end(), cmp1);
+			// 按张角排序
+			auto cmp2 = [&] (const vector2d& a, const vector2d& b) -> const bool {
+				realn a1 = -VecAngle(a - p[0], pg::axisX);
+				realn a2 = -VecAngle(b - p[0], pg::axisX);
+				return a1 < a2;
+			};
+			std::sort(p.begin() + 1, p.end(), cmp2);
+			// 计算凸包
+			auto get_angle = [](const vector2d& v) -> const realn {
+				realn t = atan2(v.y, v.x);
+				if (t < 0) return t + PI * 2;
+				return t;
+			};
+			std::vector <vector2d> id(p.size());
+			id[0] = p[0], id[1] = p[1];
+			int top = 1;
+			for (int i = 2; i < p.size(); i++) {
+				realn a1 = get_angle(id[top] - id[top - 1]);
+				realn a2 = get_angle(p[i] - id[top]);
+				while (a2 < a1) {
+					top--;
+					a1 = get_angle(id[top] - id[top - 1]);
+					a2 = get_angle(p[i] - id[top]);
+				}
+				id[++top] = p[i];
+			}
+			id.resize(top + 1);
+			return id;
+		}
+		
+		// 闵可夫斯基差
+		struct Minkowski_t {
+			vector2d m_body1;
+			vector2d m_body2;
+			vector2d m_result;
+			Minkowski_t(vector2d body1, vector2d body2) {
+				m_body1 = body1, m_body2 = body2;
+				m_result = body2 - body1;
+			}
+			Minkowski_t() {}
+		};
+		struct MinkowskiLine {
+			Minkowski_t p1;
+			Minkowski_t p2;
+			MinkowskiLine(Minkowski_t p1_, Minkowski_t p2_) : p1(p1_), p2(p2_) {}
+			MinkowskiLine() {}
+			inline realn Length() {
+				return Mod(p2.m_result - p1.m_result);
+			}
+			inline vector2d CalcCenter() {
+				return (p2.m_result + p1.m_result) / 2;
+			}
+		};
+
 		// 碰撞检测
 		namespace collision {
-			
-			// 闵可夫斯基差
-			struct Minkowski_t {
-				vector2d m_body1;
-				vector2d m_body2;
-				vector2d m_result;
-				Minkowski_t(vector2d body1, vector2d body2) {
-					m_body1 = body1, m_body2 = body2;
-					m_result = body2 - body1;
-				}
-				Minkowski_t() {}
-			};
-			struct MinkowskiLine {
-				Minkowski_t p1;
-				Minkowski_t p2;
-				MinkowskiLine(Minkowski_t p1_, Minkowski_t p2_) : p1(p1_), p2(p2_) {}
-				MinkowskiLine() {}
-				inline realn Length() {
-					return Mod(p2.m_result - p1.m_result);
-				}
-				inline vector2d CalcCenter() {
-					return (p2.m_result - p1.m_result) / 2;
-				}
-			};
-			
+
 			// 详细碰撞数据
 			struct CollisionData {
 				bool detect = false;			// 是否碰撞
@@ -855,7 +926,7 @@ namespace ggcc {
 				Minkowski_t m2(a.Support(u), b.Support(-u));// 第一个闵可夫斯基差
 				Minkowski_t m3;								// 第三个闵可夫斯基差
 				Minkowski_t pure[3] = {m1, m2, m3};			// 单纯性三个顶点
-				if (m1.m_result*u < 0 || m2.m_result*u > 0) return cp;
+				if (m1.m_result * u < 0 || m2.m_result * u > 0) return cp;
 				vector2d last_p1 = {INT_MAX, INT_MAX};
 				bool flag = false;
 				while (1) {
@@ -886,10 +957,10 @@ namespace ggcc {
 					realn t2 = ((-pure[1].m_result) ^ (pure[2].m_result - pure[1].m_result));
 					realn t3 = ((-pure[2].m_result) ^ (pure[0].m_result - pure[2].m_result));
 					if ((t1 >= -0.00001 && t2 >= -0.00001 && t3 >= -0.00001) || (t1 <= 0.00001 && t2 <= 0.00001 && t3 <= 0.00001)) break;
-					if (m1.m_result*u < 0) return cp;
+					if (m1.m_result * u < 0) return cp;
 				}
 				// ============== EPA 阶段 ==============
-				auto cmp = [&](MinkowskiLine& A,MinkowskiLine& B) -> const bool {
+				auto cmp = [&](MinkowskiLine& A, MinkowskiLine& B) -> const bool {
 					realn s1 = (A.p2.m_result - A.p1.m_result) ^ (pg::origin - A.p1.m_result);
 					realn s2 = (B.p2.m_result - B.p1.m_result) ^ (pg::origin - B.p1.m_result);
 					return std::fabs(s1 / A.Length()) > std::fabs(s2 / B.Length());
@@ -912,13 +983,10 @@ namespace ggcc {
 					// 计算穿透向量
 					cp.penetrate = pg::origin - top.p1.m_result - ShadowV(pg::origin - top.p1.m_result, top.p2.m_result - top.p1.m_result);
 					// 计算支撑点
-					if (std::fabs(u * u1) < 0.00001) {
-						realn t1 = (top.p2.m_result - top.p1.m_result) ^ u;
-						realn t2 = (top.p2.m_result - top.p1.m_result) ^ pure_o;
-						if (std::fabs(t2) < 0.00001) break;
-						if (t1 * t2 > 0) u = -u;
-					} // 原点与边重合，选择背离单纯形重心的方向
-					else if (u * u1 < 0) u = -u;					// 选择背离原点的方向
+					realn t1 = (top.p2.m_result - top.p1.m_result) ^ u;
+					realn t2 = (top.p2.m_result - top.p1.m_result) ^ (pure_o - u1);
+					if (std::fabs(t2) < 0.00001) break;
+					if (t1 * t2 > 0) u = -u;						// 选择背离单纯形的方向搜索
 					m3 = Minkowski_t(a.Support(-u), b.Support(u));	// 计算u方向的新节点
 					if (m3.m_result == top.p1.m_result) break;		// 重复，退出
 					if (m3.m_result == top.p2.m_result) break;		// 重复，退出
@@ -940,7 +1008,7 @@ namespace ggcc {
 				}
 				return cp;
 			}
-
+			
 		}
 
 	}

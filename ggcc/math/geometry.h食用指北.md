@@ -143,13 +143,14 @@ point2d CentralSymmetry(point2d o, point2d v);          // 中心对称
 ```cpp
 // 图形类型
 enum ShapeType {
-    shapetype_empty = 0,      // 空白图形
-    shapetype_segment = 1,    // 线段
-    shapetype_circle = 2,     // 圆形
-    shapetype_ellipse = 3,    // 椭圆形
-    shapetype_polygon = 4,    // 多边形
-    shapetype_roundpoly = 5,  // 圆角多边形
-    shapetype_capsule = 6     // 胶囊形
+    shapetype_empty = 0,        // 空白图形
+    shapetype_point = 1,        // 点
+    shapetype_segment = 2,    // 线段
+    shapetype_circle = 3,        // 圆形
+    shapetype_ellipse = 4,    // 椭圆形
+    shapetype_polygon = 5,    // 多边形
+    shapetype_roundpoly = 6,// 圆角多边形
+    shapetype_capsule = 7        // 胶囊形
 };
 ```
 
@@ -157,6 +158,7 @@ enum ShapeType {
 
 | 类名                  | 说明                       | 对应`ShapeType`       |
 | ------------------- | ------------------------ | ------------------- |
+| `pg::point`         | 点，继承于`pg::shape`         | shapetype_point     |
 | `pg::segment`       | 线段，继承于`pg::shape`        | shapetype_segment   |
 | `pg::circle`        | 圆形，继承于`pg::shape`        | shapetype_circle    |
 | `pg::ellipse`       | 椭圆形，继承于`pg::shape`       | shapetype_ellipse   |
@@ -242,7 +244,17 @@ rec.rotate = PI / 3; // 改变朝向
 
 
 
-### 0x33 包围盒AABB
+### 0x33 凸包
+
+凸包函数接受点阵`std::vector <vector2d>`作为参数，返回点阵`std::vector <vector2d>`表示凸包：
+
+```cpp
+pg::polygon pg::ConvexHull(std::vector <vector2d> p);
+```
+
+
+
+### 0x34 包围盒AABB
 
 **AABB包围盒** 通过构造水平竖直的矩形包围物体。在碰撞检测之前先检测**AABB**碰撞，可以提高速度。
 
@@ -271,7 +283,9 @@ pg::aabb pg::aabb::Merge(const aabb& a, const aabb& b); // 合并AABB包围盒
 bool pg::aabb::Collide(const aabb& a, const aabb& b);   // 检测AABB碰撞
 ```
 
-### 0x34 精细碰撞检测
+
+
+### 0x35 精细碰撞检测
 
 精细碰撞检测使用函数`pg::collision::NarrowPhase()`实现，采用 GJK + EPA 算法
 
@@ -404,6 +418,20 @@ int main() {
   
   
 
+## <u>更新日志</u>
+
+### $2024.8.30$
+
+- 修复：碰撞检测 **EPA** 部分的精度问题
+
+- 修复：构造函数未定义
+
+- 修复：线段（`pg::segment`）支撑点计算问题
+
+- 新增：凸包求解函数（`pg::ConvexHull()`）
+
+- 新增：图形-点（`pg::point`）
+  
+  
+
 <mark>**欢迎大家反馈bug、提出建议 或者 参加 geometry.h 的开发！**</mark>
-
-
