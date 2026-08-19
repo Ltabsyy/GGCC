@@ -9,10 +9,10 @@
 #include <raylib.h>
 #include <rlgl.h>
 #include <rdrawing.h>
-#include <ggcc/animation.h>
-#include <ggcc/math/geometry.h>
-#include <ggcc/math/evaluate.h>
-#include <ggcc/word_process.h>
+#include "animation.h"
+#include "math/geometry.h"
+#include "math/evaluate.h"
+#include "word_process.h"
 
 #include <vector>
 #include <stack>
