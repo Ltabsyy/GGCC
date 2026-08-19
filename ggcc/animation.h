@@ -1,208 +1,13 @@
 // ggcc_animation
 // ggcc动画库
 
-#ifndef __GGCCANIMATION_H__
-#define __GGCCANIMATION_H__
+#pragma once
 
 #include <functional>
 #include <ctime>
 #include <cmath>
 
 using realn = long double;
-
-#ifdef __GGCCANIMATION_H_OLD__
-
-#define MAXANIARRAY   128
-#define MAXANI 1024
-
-using namespace std;
-namespace ggcc {
-
-	// 计时器
-	unsigned long long StartGClcok = 0;
-	unsigned long long LastUpdateGClock = 0;
-	bool GClockInited = false;
-	long long gclock() {
-		if (!GClockInited) {
-			GClockInited = true;
-			timespec tp;
-			clock_gettime(CLOCK_REALTIME, &tp);
-			StartGClcok = (unsigned long long)(tp.tv_sec) * 1000 + (unsigned long long)(tp.tv_nsec / 1000000);
-			LastUpdateGClock = StartGClcok;
-			return 0;
-		}
-		timespec tp;
-		clock_gettime(CLOCK_REALTIME, &tp);
-		unsigned long long now = tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
-		return (long long)(now - StartGClcok);
-	}
-	void update_gclock() {
-		if (!GClockInited) {
-			GClockInited = true;
-			timespec tp;
-			clock_gettime(CLOCK_REALTIME, &tp);
-			StartGClcok = (unsigned long long)(tp.tv_sec) * 1000 + (unsigned long long)(tp.tv_nsec / 1000000);
-			LastUpdateGClock = StartGClcok;
-		} else {
-			timespec tp;
-			clock_gettime(CLOCK_REALTIME, &tp);
-			unsigned long long now = tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
-			if (now - LastUpdateGClock > 100) StartGClcok += now - LastUpdateGClock - 16;
-			LastUpdateGClock = now;
-		}
-	}
-
-	class Animation {
-	private:
-		realn StartPos = 0;
-		realn TargetPos = 0;
-		realn NowPos;
-		realn Speed = 0.5;
-		int LastUpdateClock = 0;
-		int MoveStyle = 0;
-
-		realn CreateAni0(realn Start, realn End, int SpaceTime) {
-			return Start + (End - Start) * (1 - pow(Speed, 1.0 * SpaceTime / 50));
-		}
-		realn CreateAni1(realn Start, realn End, int Spacetime) {
-			realn Dis = abs(End - Start);
-			realn Temp = log(Dis) / log(2);
-			realn t;
-			if (End > Start) {
-				t = Start + Temp * (1.0 * Spacetime / Speed);
-				if (t > End)t = End;
-			} else {
-				t = Start - Temp * (1.0 * Spacetime / Speed);
-				if (t < End)t = End;
-			}
-			return t;
-		}
-
-	public:
-		Animation(realn spos, realn tpos);
-		void SetStartPos(realn Pos);
-		void SetTargetPos(realn Pos);
-		void SetMoveStyle(int Style);
-		void SetSpeed(realn Speed);
-		void GetNowPos(realn &Pos);
-		realn GetNowPos();
-		realn GetTargetPos();
-		void Update();
-	};
-
-	Animation::Animation(realn spos = 0, realn tpos = 0) {
-		StartPos = spos;
-		TargetPos = tpos;
-		NowPos = spos;
-	}
-	void Animation::SetStartPos(realn Pos) {
-		StartPos = Pos;
-		LastUpdateClock = gclock();
-		NowPos = Pos;
-	}
-	void Animation::SetTargetPos(realn Pos) {
-		TargetPos = Pos;
-	}
-	void Animation::SetMoveStyle(int Style) {
-		MoveStyle = Style;
-	}
-	void Animation::SetSpeed(realn speed) {
-		Speed = speed;
-	}
-	void Animation::GetNowPos(realn &Pos) {
-		Pos = NowPos;
-	}
-	realn Animation::GetNowPos() {
-		return NowPos;
-	}
-	realn Animation::GetTargetPos() {
-		return TargetPos;
-	}
-	void Animation::Update() {
-		if (MoveStyle == 0) {
-			NowPos = CreateAni0(NowPos, TargetPos, gclock() - LastUpdateClock);
-			LastUpdateClock = gclock();
-		} else if (MoveStyle == 1) {
-			NowPos = CreateAni1(NowPos, TargetPos, gclock() - LastUpdateClock);
-			LastUpdateClock = gclock();
-		}
-	}
-
-	Animation Ani[MAXANIARRAY][MAXANI];
-	int NowAniArrayID = 0;
-	int NowAniID = 0;
-
-	void SetAniArray(int id) {
-		NowAniArrayID = id;
-	}
-
-	void SetStartAni(int id) {
-		NowAniID = id;
-	}
-
-	void UpdateAniArray() {
-		for (int i = 0; i < MAXANI; i++) {
-			Ani[NowAniArrayID][i].Update();
-		}
-	}
-
-	realn GetAniPos(int id) {
-		realn k;
-		Ani[NowAniArrayID][id].GetNowPos(k);
-		return k;
-	}
-
-	realn GetNextAniPos() {
-		NowAniID++;
-		return GetAniPos(NowAniID - 1);
-	}
-
-	void SetAniStartPos(int id, int Pos) {
-		Ani[NowAniArrayID][id].SetStartPos(Pos);
-	}
-
-	void SetAniTargetPos(int id, int Pos) {
-		Ani[NowAniArrayID][id].SetTargetPos(Pos);
-	}
-
-	void SetAniSpeed(int id, int speed) {
-		Ani[NowAniArrayID][id].SetSpeed(speed);
-	}
-	void SetAniSpeed(int speed) {
-		for (int i = 0; i < MAXANI; i++) {
-			Ani[NowAniArrayID][i].SetSpeed(speed);
-		}
-	}
-
-	void SetAniMoveStyle(int id, int Style) {
-		Ani[NowAniArrayID][id].SetMoveStyle(Style);
-	}
-	void SetAniMoveStyle(int Style) {
-		for (int i = 0; i < MAXANI; i++) {
-			Ani[NowAniArrayID][i].SetMoveStyle(Style);
-		}
-	}
-
-	void SetAniPos(int id, int StartPos, int TargetPos) {
-		Ani[NowAniArrayID][id].SetStartPos(StartPos);
-		Ani[NowAniArrayID][id].SetTargetPos(TargetPos);
-	}
-
-	void SetNextAniPos(int StartPos, int TargetPos) {
-		Ani[NowAniArrayID][NowAniID].SetStartPos(StartPos);
-		Ani[NowAniArrayID][NowAniID].SetTargetPos(TargetPos);
-		NowAniID++;
-	}
-
-}
-
-#endif
-
-#ifndef __GGCCANIMATION_H_OLD__
-
-#define MAXANIARRAY   128
-#define MAXANI 1024
-#include <iostream>
 
 namespace ggcc {
 
@@ -253,79 +58,82 @@ namespace ggcc {
 
 		// 动画参数结构体
 		struct AniPara {
-			std::function <realn(realn)> fun;	// 动画函数
 			realn startp;						// 动画起始点
 			realn endp;							// 动画终止点
-			AniPara(std::function <realn(realn)> f, realn start, realn end) {
+			std::function <realn(realn)> fun;	// 动画函数
+			AniPara(realn start, realn end, std::function <realn(realn)> f) {
 				fun = f;
 				startp = start;
 				endp = end;
 			}
 		};
 		// 瞬间动画
-		realn momentFun(realn x) {
-			if (x <= 0)return 0;
-			return 1;
-		}
+		AniPara moment{0, 1, [](realn x) {
+				return x <= 0 ? 0 : 1;
+			}};
 		// 线性动画
-		realn linearFun(realn x) {
+		AniPara linear{0, 1, [](realn x) {
 			return x;
-		}
-		// 经典动画
-		realn classicsFun(realn x) {
-			return pow(1.618, x);
-		}
-		realn classicsdFun(realn x) {
-			if (x < 10)return pow(1.618, x);
-			else return pow(1.618, 10) * 2 - pow(1.618, 20 - x) + 1;
-		}
-		// sin动画
-		realn sineFun(realn x) {
-			return sin(x);
-		}
-		// tan动画
-		realn tanFun(realn x) {
-			return sin(x) / cos(x);
-		}
-		// tanh动画
-		realn tanhFun(realn x) {
-			return (exp(x) - exp(-x)) / (exp(x) + exp(-x));
-		}
+		}};
+		// 经典动画（先快后慢）
+		AniPara classics {10, 0, [](realn x) {
+			return std::pow(1.618, x);
+		}};
+		// 经典动画（先慢后快）
+		AniPara classics_r {10, 0, [](realn x) {
+			return std::pow(1.618, x);
+		}};
+		// 经典动画（先慢后快再快）
+		AniPara classics_d {0, 20, [](realn x) {
+			if (x < 10) return std::pow(1.618, x);
+			return std::pow(1.618, 10) * 2 - std::pow(1.618, 20 - x) + 1;
+		}};
+		// sin函数动画
+		AniPara sine {-3.1415926 / 2, 3.1415926 / 2, [](realn x) {
+			return std::sin(x);
+		}};
+		// tan函数动画
+		AniPara tanf { -1.35, 1.35, [](realn x) {
+			return std::tan(x);
+		}};
+		// tanh函数动画
+		AniPara tanh {-2.5, 2.5, [](realn x) {
+			return std::tanh(x);
+		}};
 		// 回弹动画（阻力5）
-		realn bounceFun(realn x) {
-			return -7.0 / 51 * sqrt(51) * exp(-7.0 / 10 * x) * sin(1.0 / 10 * sqrt(51) * x) - exp(-7.0 / 10 * x) * cos(1.0 / 10 * sqrt(51) * x);
-		}
+		AniPara bounce {-8.9726, 0, [](realn x) {
+			return -7.0 / 51 * std::sqrt(51) * std::exp(-7.0 / 10 * x) * std::sin(1.0 / 10 * sqrt(51) * x) - std::exp(-7.0 / 10 * x) * std::cos(1.0 / 10 * std::sqrt(51) * x);
+		}};
+		// 回弹动画（阻力5）
+		AniPara bounce1 {-8.9726, 0, [](realn x) {
+			return -7.0 / 51 * std::sqrt(51) * std::exp(-7.0 / 10 * x) * std::sin(1.0 / 10 * sqrt(51) * x) - std::exp(-7.0 / 10 * x) * std::cos(1.0 / 10 * std::sqrt(51) * x);
+		}};
 		// 回弹动画（阻力4）
-		realn bounce2Fun(realn x) {
-			return -13.0 / 231 * sqrt(231) * exp(-13.0 / 20 * x) * sin(1.0 / 20 * sqrt(231) * x) - exp(-13.0 / 20 * x) * cos(1.0 / 20 * sqrt(231) * x);
-		}
+		AniPara bounce2 {-8.2645, 0, [](realn x) {
+			return -13.0 / 231 * std::sqrt(231) * std::exp(-13.0 / 20 * x) * std::sin(1.0 / 20 * std::sqrt(231) * x) - std::exp(-13.0 / 20 * x) * std::cos(1.0 / 20 * std::sqrt(231) * x);
+		}};
 		// 回弹动画（阻力3）
-		realn bounce3Fun(realn x) {
-			return -3.0 / 4 * exp(-3.0 / 5 * x) * sin(4.0 / 5 * x) - exp(-3.0 / 5 * x) * cos(4.0 / 5 * x);
-		}
+		AniPara bounce3 {-7.9188, 0, [](realn x) {
+			return -3.0 / 4 * std::exp(-3.0 / 5 * x) * std::sin(4.0 / 5 * x) - std::exp(-3.0 / 5 * x) * std::cos(4.0 / 5 * x);
+		}};
 		// 回弹动画（阻力2）
-		realn bounce4Fun(realn x) {
-			return -11.0 / 93 * sqrt(31) * exp(-11.0 / 20 * x) * sin(3.0 / 20 * sqrt(31) * x) - exp(-11.0 / 20 * x) * cos(3.0 / 20 * sqrt(31) * x);
-		}
-		// 回弹动画（阻力1）
-		realn bounce5Fun(realn x) {
-			return -1.0 / 3 * sqrt(3) * exp(-1.0 / 2 * x) * sin(1.0 / 2 * sqrt(3) * x) - exp(-1.0 / 2 * x) * cos(1.0 / 2 * sqrt(3) * x);
-		}
-		
-		AniPara moment{momentFun, 0, 1};						// 瞬间动画
-		AniPara linear{linearFun, 0, 1};						// 线性动画
-		AniPara classics {classicsFun, 10, 0};				// 经典动画（先快后慢）
-		AniPara classics_r {classicsFun, 0, 10};				// 经典动画（先慢后快）
-		AniPara classics_d {classicsdFun, 0, 20};			// 经典动画（先慢后快再慢）
-		AniPara sine {sineFun, -3.1415926/2, 3.1415926/2};	// sin函数动画
-		AniPara tanf {tanFun,-1.35, 1.35};					// tan函数动画
-		AniPara tanh {tanhFun,-2.5, 2.5};					// tanh函数动画
-		AniPara bounce {bounceFun,-8.9726,0};  				// 回弹动画（阻力5）
-		AniPara bounce1 {bounceFun,-8.9726,0}; 				// 回弹动画（阻力5）
-		AniPara bounce2 {bounce2Fun,-8.2645,0};				// 回弹动画（阻力4）
-		AniPara bounce3 {bounce3Fun,-7.9188,0};				// 回弹动画（阻力3）
-		AniPara bounce4 {bounce4Fun,-7.5220,0};				// 回弹动画（阻力2）
-		AniPara bounce5 {bounce5Fun,-7.3448,0};				// 回弹动画（阻力1）
+		AniPara bounce4 {-7.5220, 0, [](realn x) {
+			return -11.0 / 93 * std::sqrt(31) * std::exp(-11.0 / 20 * x) * std::sin(3.0 / 20 * std::sqrt(31) * x) - std::exp(-11.0 / 20 * x) * std::cos(3.0 / 20 * std::sqrt(31) * x);
+		}};
+		// 回弹动画（阻力2）
+		AniPara bounce5 {-7.3448, 0, [](realn x) {
+			return -1.0 / 3 * std::sqrt(3) * std::exp(-1.0 / 2 * x) * std::sin(1.0 / 2 * std::sqrt(3) * x) - std::exp(-1.0 / 2 * x) * std::cos(1.0 / 2 * std::sqrt(3) * x);
+		}};
+		// G3动画（左连右连）
+		AniPara g3 {0, 3.14159 * 2, [](realn x) {
+			return x - std::sin(x);
+		}};
+		AniPara g3r {3.14158, 3.14159 * 2, [](realn x) {
+			return x - std::sin(x);
+		}};
+		AniPara g3l {0, 3.14159, [](realn x) {
+			return x - std::sin(x);
+		}};
 	}
 
 	int AniTotal = 0;
@@ -341,9 +149,7 @@ namespace ggcc {
 		int RepeatDelay = 0;
 		int ReturnDelay = 0;
 		realn NowPos;
-		std::function<realn(realn)> Fun = anif::classicsFun;
-		realn FunStart = 10;
-		realn FunEnd = 0;
+		anif::AniPara anipara = anif::classics;
 		bool IsStopped = false;
 		bool Repeat_ = false;
 		bool Return_ = false;
@@ -355,11 +161,10 @@ namespace ggcc {
 		}
 		Animation();
 		Animation(realn);
-		Animation(realn, realn);
+		Animation(realn, realn, anif::AniPara);
 
 		Animation& SetStartPos(realn);
 		Animation& SetTargetPos(realn, int);
-		Animation& SetMoveStyle(std::function<realn(realn)>, realn, realn);
 		Animation& SetMoveStyle(anif::AniPara);
 		Animation& SetDuration(int);
 		realn GetNowPos();
@@ -381,9 +186,6 @@ namespace ggcc {
 		}
 		inline Animation& stp(realn pos, int delay = 0) {
 			return SetTargetPos(pos, delay);
-		}
-		inline Animation& sms(std::function<realn(realn)> fun, realn st, realn end) {
-			return SetMoveStyle(fun, st, end);
 		}
 		inline Animation& sms(anif::AniPara para) {
 			return SetMoveStyle(para);
@@ -437,11 +239,11 @@ namespace ggcc {
 		realn AniFun(realn x) {
 			if (x < 0)return StartPos;
 			if (x > Duration)return TargetPos;
-			realn dtf = FunEnd - FunStart;
-			realn l = Fun(FunEnd) - Fun(FunStart);
+			realn dtf = anipara.endp - anipara.startp;
+			realn l = anipara.fun(anipara.endp) - anipara.fun(anipara.startp);
 			realn zoom = 1.0 * (TargetPos - StartPos) / l;
 			realn dt = x / Duration * dtf;
-			return (Fun(FunStart + dt) - Fun(FunStart)) * zoom + StartPos;
+			return (anipara.fun(anipara.startp + dt) - anipara.fun(anipara.startp)) * zoom + StartPos;
 		}
 		realn GetPos(realn x) {
 			x -= StartTime;
@@ -470,10 +272,11 @@ namespace ggcc {
 		StartTime = gclock();
 		AniTotal++;
 	}
-	Animation::Animation(realn spos, realn tpos) {
+	Animation::Animation(realn spos, realn tpos, anif::AniPara para = anif::classics) {
 		NowPos = StartPos = spos;
 		TargetPos = tpos;
 		StartTime = gclock();
+		anipara = para;
 		AniTotal++;
 	}
 	Animation& Animation::SetStartPos(realn pos) {
@@ -488,16 +291,8 @@ namespace ggcc {
 		StartTime = gclock() + delay;
 		return *this;
 	}
-	Animation& Animation::SetMoveStyle(std::function<realn(realn)> fun, realn start, realn end) {
-		Fun = fun;
-		FunStart = start;
-		FunEnd = end;
-		return *this;
-	}
 	Animation& Animation::SetMoveStyle(anif::AniPara para) {
-		Fun = para.fun;
-		FunStart = para.startp;
-		FunEnd = para.endp;
+		anipara = para;
 		return *this;
 	}
 	Animation& Animation::SetDuration(int time) {
@@ -531,7 +326,7 @@ namespace ggcc {
 	}
 	Animation& Animation::Update() {
 		int NowTime = gclock();
-		realn dtf = FunEnd - FunStart;
+		realn dtf = anipara.endp - anipara.startp;
 		if (NowTime < StartTime) return *this;
 		if (NowTime > StartTime + Duration) {
 			if (Repeat_) {
@@ -554,10 +349,10 @@ namespace ggcc {
 			return *this;
 		}
 		if (AniEnabled == 1) {
-			realn l = Fun(FunEnd) - Fun(FunStart);
+			realn l = anipara.fun(anipara.endp) - anipara.fun(anipara.startp);
 			realn zoom = 1.0 * (TargetPos - StartPos) / l;
 			realn dt = 1.0 * (NowTime - StartTime) / Duration * dtf;
-			NowPos = (Fun(FunStart + dt) - Fun(FunStart)) * zoom + StartPos;
+			NowPos = (anipara.fun(anipara.startp + dt) - anipara.fun(anipara.startp)) * zoom + StartPos;
 		} else if (AniEnabled == 0) {
 			NowPos = TargetPos;
 		} else if (AniEnabled == 2) {
@@ -565,7 +360,7 @@ namespace ggcc {
 			realn l = 1;
 			realn zoom = 1.0 * (TargetPos - StartPos) / l;
 			realn dt = 1.0 * (NowTime - StartTime) / Duration * dtf;
-			NowPos = (FunStart + dt - FunStart) * zoom + StartPos;
+			NowPos = (anipara.startp + dt - anipara.startp) * zoom + StartPos;
 		}
 		return *this;
 	}
@@ -606,6 +401,3 @@ namespace ggcc {
 	}
 
 };
-
-#endif
-#endif

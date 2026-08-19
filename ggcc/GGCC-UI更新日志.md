@@ -1,5 +1,41 @@
 # GGCC-UI 更新日志
 
+## V 2.4.0
+
+- 新增：全面支持 lambda 表达式
+
+- 调整：取消图形调试器（GraphDebugger），改用场景（Scene）
+
+- 调整：取消三维图形调试器（GraphDebugger3D），改用三维场景（Scene3D）
+
+- <mark>场景（Scene）</mark>
+  
+  - 新增：全面兼容 **geometry.h**，可使用 `ui::plot->shape();` 直接绘制几何图形
+  
+  - 新增：绘制 raylib 字体 `ui::plot->raylib_text();`
+  
+  - 新增：可限制网格格范围 `ui::plot->set_mesh();`
+  
+  - 新增：可限制缩放范围
+  
+  - 新增：设置缩放和摄像机 `ui::plot->set_zoom() ui::plot->set_position();`
+  
+  - 新增：椭圆形、多边形、圆角多边形等 `ui::plot->ellipse(); ui::plot->polygon(); ui::plot->round_polygon();`
+  
+  - 新增：使用 **evaluate.h** ，可通过字符串生成函数 `ui::plot->function("sin(x)*cos(x)");`
+  
+  - 调整：取消 `g.draw` 系列函数，改用 `ui::plot->` 系列函数
+  
+  - 修正：鼠标检测问题
+
+- 调整：取消界面（Interface），改用页面（Page）
+
+- 调整：取消 add:: 系列函数，改用 create:: 系列函数
+
+- <mark>修正：启动程序有概率崩溃</mark>
+
+- 修正：部分函数无法链式调用
+
 ## V 2.3.4
 
 - 新增：根据群友 <mark>**Ltabssy**</mark> 提供的算法和配色方案，优化代码高亮

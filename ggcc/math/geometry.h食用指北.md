@@ -145,12 +145,12 @@ point2d CentralSymmetry(point2d o, point2d v);          // 中心对称
 enum ShapeType {
     shapetype_empty = 0,        // 空白图形
     shapetype_point = 1,        // 点
-    shapetype_segment = 2,    // 线段
-    shapetype_circle = 3,        // 圆形
-    shapetype_ellipse = 4,    // 椭圆形
-    shapetype_polygon = 5,    // 多边形
-    shapetype_roundpoly = 6,// 圆角多边形
-    shapetype_capsule = 7        // 胶囊形
+    shapetype_segment = 2,      // 线段
+    shapetype_circle = 3,       // 圆形
+    shapetype_ellipse = 4,      // 椭圆形
+    shapetype_polygon = 5,      // 多边形
+    shapetype_roundpoly = 6,    // 圆角多边形
+    shapetype_capsule = 7       // 胶囊形
 };
 ```
 
@@ -342,9 +342,9 @@ std::cout << result.p2 << std::endl;
 
 注意，碰撞点对 $P1$, $P2$ 是两个图形碰撞的最近分离点，穿透深度 $\overrightarrow{penetrare} = P1 - P2$
 
-<img title="" src="https://i-blog.csdnimg.cn/direct/4d48e7e97d9d44a88ec280373d72894f.png" alt="image" style="zoom:33%;">
+<img title="" src="https://i-blog.csdnimg.cn/direct/4d48e7e97d9d44a88ec280373d72894f.png" alt="image" style="zoom:30%;">
 
-## <u>0x40 使用 GGCC-UI </u>
+## <u>0x40 使用 GGCC-UI</u>
 
 
 
@@ -352,7 +352,7 @@ std::cout << result.p2 << std::endl;
 
 **GGCC-UI**内置的`ui::GraphDebugger`控件可用于演示**geometry.h**的内容
 
-<img src="https://i-blog.csdnimg.cn/direct/2dec5ba4c5914e8e93cdc6e033e417b4.png" title="" alt="image" style="zoom:50%;">
+<img src="https://i-blog.csdnimg.cn/direct/2dec5ba4c5914e8e93cdc6e033e417b4.png" title="" alt="image" style="zoom:70%;">
 
 ### 0x42 示例程序
 
@@ -382,7 +382,7 @@ int main() {
         for (auto i : body) {
             bool detect = 0;
             vector2d move;
-            for (auto j : body) 
+            for (auto j : body)
                 if (i != j) {
                     auto result = pg::collision::NarrowPhase(*i, *j);
                     move += result.penetrate;
@@ -415,10 +415,18 @@ int main() {
 - [ ] 四元数
 
 - [ ] 矩阵相关运算
-  
-  
+
+
 
 ## <u>更新日志</u>
+
+### $2024.9.9$
+
+- 新增：图形的运动
+  - `shape::MoveForward()`，向前
+  - `shape::TurnLeft()`，向左转
+  - `shape::TurnRight()`，向右转
+  - `shape::FaceTo()`，面朝某个方向
 
 ### $2024.8.30$
 
@@ -431,7 +439,7 @@ int main() {
 - 新增：凸包求解函数（`pg::ConvexHull()`）
 
 - 新增：图形-点（`pg::point`）
-  
-  
+
+
 
 <mark>**欢迎大家反馈bug、提出建议 或者 参加 geometry.h 的开发！**</mark>

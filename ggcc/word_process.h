@@ -1,8 +1,7 @@
 // word_process.h
 // ggcc文字处理库
 
-#ifndef GGCC_WORD_PROCESS_H
-#define GGCC_WORD_PROCESS_H
+#pragma once
 
 #include <string>
 #include <sstream>
@@ -393,5 +392,3 @@ namespace ggcc {
 
 	}
 }
-
-#endif

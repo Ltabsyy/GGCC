@@ -1,8 +1,7 @@
 // geometry.h
 // ggcc数学-几何
 
-#ifndef __GGCCMATHGEOMETRY_H__
-#define __GGCCMATHGEOMETRY_H__
+#pragma once
 
 #include <queue>
 #include <vector>
@@ -608,9 +607,9 @@ namespace ggcc {
 			realn y2;
 			static aabb Merge(const aabb& a, const aabb& b) {
 				realn x1 = std::min(a.x1, b.x1);
-				realn x2 = std::min(a.x2, b.x2);
+				realn x2 = std::max(a.x2, b.x2);
 				realn y1 = std::min(a.y1, b.y1);
-				realn y2 = std::min(a.y2, b.y2);
+				realn y2 = std::max(a.y2, b.y2);
 				return aabb {x1, x2, y1, y2};
 			}
 			static bool Collide(const aabb& a, const aabb& b) {
@@ -1258,5 +1257,3 @@ namespace ggcc {
 	}
 
 }
-
-#endif
