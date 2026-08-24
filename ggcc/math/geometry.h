@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <complex>
 
-using realn = long double;
+using realn = float;
 
 #ifndef PI
 	#define PI 3.14159265358979323846f
@@ -803,10 +803,10 @@ namespace ggcc {
 			}
 			vector2d Support(vector2d u) override {
 				u = u.Rotate(-rotate);
-				if (u.x == 0 && u.y > 0)return Abs(vector2d{0, b});
-				if (u.x == 0 && u.y < 0)return Abs(vector2d{0, -b});
-				if (u.y == 0 && u.x > 0)return Abs(vector2d{a, 0});
-				if (u.y == 0 && u.x < 0)return Abs(vector2d{-a, 0});
+				if (u.x == 0 && u.y > 0)return Abs(vector2d(0, b));
+				if (u.x == 0 && u.y < 0)return Abs(vector2d(0, -b));
+				if (u.y == 0 && u.x > 0)return Abs(vector2d(a, 0));
+				if (u.y == 0 && u.x < 0)return Abs(vector2d(-a, 0));
 				realn k = u.y / u.x;
 				realn d = sqrt((a*a + b*b*k*k) / k / k);
 				if (u * vector2d(0, d) < 0)d = -d;
@@ -1149,7 +1149,7 @@ namespace ggcc {
 				Minkowski_t m3;								// 第三个闵可夫斯基差
 				Minkowski_t pure[3] = {m1, m2, m3};			// 单纯性三个顶点
 				if (m1.m_result * u < 0 || m2.m_result * u > 0) return cp;
-				vector2d last_p1 = {INT_MAX, INT_MAX};
+				vector2d last_p1(realn(INT_MAX), realn(INT_MAX));
 				bool flag = false;
 				while (1) {
 					// 寻找单纯形最靠近原点的边

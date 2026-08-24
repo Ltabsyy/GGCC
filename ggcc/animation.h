@@ -7,7 +7,7 @@
 #include <ctime>
 #include <cmath>
 
-using realn = long double;
+using realn = float;
 
 namespace ggcc {
 
@@ -18,36 +18,37 @@ namespace ggcc {
 	long long GClockInterval = 0;
 	bool GClockInited = false;
 	long long gclock() {
-		if (!GClockInited) {
-			GClockInited = true;
-			timespec tp;
-			clock_gettime(CLOCK_REALTIME, &tp);
-			StartGClcok = (unsigned long long)(tp.tv_sec) * 1000 + (unsigned long long)(tp.tv_nsec / 1000000);
-			LastUpdateGClock = StartGClcok;
-			return 0;
-		}
-		timespec tp;
-		clock_gettime(CLOCK_REALTIME, &tp);
-		unsigned long long now = tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
-		return (long long)(now - StartGClcok);
+//		if (!GClockInited) {
+//			GClockInited = true;
+//			timespec tp;
+//			clock_gettime(CLOCK_REALTIME, &tp);
+//			StartGClcok = (unsigned long long)(tp.tv_sec) * 1000 + (unsigned long long)(tp.tv_nsec / 1000000);
+//			LastUpdateGClock = StartGClcok;
+//			return 0;
+//		}
+//		timespec tp;
+//		clock_gettime(CLOCK_REALTIME, &tp);
+//		unsigned long long now = tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
+//		return (long long)(now - StartGClcok);
+		return clock();
 	}
 	void update_gclock() {
-		if (!GClockInited) {
-			GClockInited = true;
-			timespec tp;
-			clock_gettime(CLOCK_REALTIME, &tp);
-			StartGClcok = (unsigned long long)(tp.tv_sec) * 1000 + (unsigned long long)(tp.tv_nsec / 1000000);
-			LastUpdateGClock = StartGClcok;
-		} else {
-			timespec tp;
-			clock_gettime(CLOCK_REALTIME, &tp);
-			unsigned long long now = tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
-			if (now - LastUpdateGClock > 100) StartGClcok += now - LastUpdateGClock - 16;
-			LastUpdateGClock = now;
-		}
-		long long tmp = gclock();
-		GClockInterval = tmp - LastRecordGClock;
-		LastRecordGClock = tmp;
+//		if (!GClockInited) {
+//			GClockInited = true;
+//			timespec tp;
+//			clock_gettime(CLOCK_REALTIME, &tp);
+//			StartGClcok = (unsigned long long)(tp.tv_sec) * 1000 + (unsigned long long)(tp.tv_nsec / 1000000);
+//			LastUpdateGClock = StartGClcok;
+//		} else {
+//			timespec tp;
+//			clock_gettime(CLOCK_REALTIME, &tp);
+//			unsigned long long now = tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
+//			if (now - LastUpdateGClock > 100) StartGClcok += now - LastUpdateGClock - 16;
+//			LastUpdateGClock = now;
+//		}
+//		long long tmp = gclock();
+//		GClockInterval = tmp - LastRecordGClock;
+//		LastRecordGClock = tmp;
 	}
 	long long gclock_interval() {
 		return GClockInterval;
