@@ -1,6 +1,5 @@
 #pragma once
 #include <vector>
-#include <stdio.h>;
 
 template <class T>
 class tree_node {
