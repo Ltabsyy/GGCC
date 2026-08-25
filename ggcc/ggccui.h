@@ -313,21 +313,6 @@ namespace ggcc {
 				unsigned text;		// 文本色
 			};
 		};
-//		std::unordered_map <std::string, ColorScheme> color_scheme = {
-//			{
-//				"Default",
-//				{
-//					rgb(  0,   0, 255),		// 主题色
-//					rgb( 43,  74, 121),		// 主要色
-//					rgb(32,32,32),
-//					argb(70,128,128,128),
-//					rgb(200,200,200),
-//					rgb(80,80,80),
-//					{	// 窗口
-//					}
-//				}
-//			}
-//		};
 		Color ThemeColor = BLUE;						// 主题色
 		Color MainColor = Color {43, 74, 121, 255};		// 主要色
 		Color UnitBgColor = Color {43, 74, 121, 150};	// 单元格背景色
@@ -362,15 +347,12 @@ namespace ggcc {
 		class Line;										// 分割线
 		class Textbox;									// 文本框
 		class Button;									// 按钮
-		class Button2;									// 按钮（两个）
-		class Button3;									// 按钮（三个）
 		class Slider;									// 拉动条
 		class Slider_Int;								// 拉动条(整型)
 		class Switch;									// 开关
 		class Choose;									// 选择框
 		class Collapse;									// 折叠面板
 		class Page;										// 界面
-		class Popup;									// 弹窗
 		class InputBox;									// 输入框
 		class CheckBox;									// 复选框
 		class Scene;									// 图形调试器
@@ -380,6 +362,7 @@ namespace ggcc {
 		class Window;									// 窗口
 		class SiderManager;								// 侧边栏管理器
 		class Priority;									// 优先级处理方法
+		class Layout;									// 布局
 		Element* ChooseInputBox = nullptr;				// 选择的输入框
 		Slider* ChooseSlider = nullptr;					// 选择的拉动条
 		
@@ -2366,69 +2349,42 @@ namespace ggcc {
 				return ui::SpaceSize * 4;
 			}
 		};
+		Layout* this_layout = nullptr;
 		class Layout : public Element {
-		public:
-			Layout* lo1 = nullptr;
-			Layout* lo2 = nullptr;
-			realn split = 0.5;
+		private:
+			realn position = 0.5;
 			bool movable = true;
 			bool moving = false;
-			SplitStyle split_style = split_main;
-			
+			bool is_ration = false;
+			SplitStyle split_style = split_col;
+		public:
 			Layout() {
 				Add(nullptr);
 				extra = true;
 			}
-			~Layout() {
-				delete lo1;
-				delete lo2;
-				lo1 = nullptr;
-				lo2 = nullptr;
-			}
-			
 			bool IsMoving() {
 				return moving;
 			}
-			Element* page1() {
-				if (lo1)return lo1->key[0];
-				return nullptr;
-			}
-			Element* page2() {
-				if (lo2)return lo2->key[0];
-				return nullptr;
-			}
-			Layout& Set(Element* ptr) {
-				ClearKey();
-				Add(ptr);
+			Layout& SetMode_byRow() {
+				split_style = split_row;
 				return *this;
 			}
-			Layout& Split(SplitStyle style, ui::Element* i1 = nullptr, ui::Element* i2 = nullptr) {
-				if (!Size())Add(nullptr);
-				if (style == split_main) {
-					split_style = style;
-					key[0] = i1;
-				} else {
-					split_style = style;
-					if (lo1 != nullptr && lo1->key[0] != i1) {
-						delete lo1;
-						lo1 = nullptr;
-					}
-					if (lo2 != nullptr && lo2->key[0] != i2) {
-						delete lo2;
-						lo2 = nullptr;
-					}
-					if (lo1 == nullptr)lo1 = new Layout;
-					if (lo2 == nullptr)lo2 = new Layout;
-					lo1->key[0] = i1;
-					lo2->key[0] = i2;
-				}
+			Layout& SetMode_byCol() {
+				split_style = split_col;
 				return *this;
 			}
-			Layout& Set(realn pos) {
-				split = pos;
+			Layout& SetPosition_byRatio(realn ratio) {
+				position = ratio;
+				return *this;
+			}
+			Layout& SetPosition_byPixel(int pixel) {
+				position = realn(pixel);
 				return *this;
 			}
 			int Draw(int x, int y, int w, int h, bool check = true) {
+				if (key.size() < 2) return h;
+				Element* lo1 = key[0];
+				Element* lo2 = key[1];
 				int k = SpaceSize;
 				if (split_style == split_main && key[0]) {
 					key[0]->Draw_Auto_Extra(x, y, w, h, check);
@@ -2436,60 +2392,60 @@ namespace ggcc {
 					if (movable) {
 						if (moving) {
 							MouseCursorStyle = MOUSE_CURSOR_RESIZE_EW;
-							split = 1.0 * (GetMouseX() - x - 4 * dpi) / (w - 8 * dpi);
-							if (split < 0)split = 0;
-							if (split > 1)split = 1;
-							lo1->Draw(x, y, (w - 8 * dpi) * split, h, check && !moving);
-							lo2->Draw(x + (w - 8 * dpi) * split + 8 * dpi, y, (w - 8 * dpi) * (1 - split), h, check && !moving);
-							DrawRectangle(x + (w - 8 * dpi) * split, y, 8 * dpi, h, LIGHTGRAY);
-							DrawLine(x + (w - 8 * dpi) * split + 2 * dpi, y + h / 2 - 10 * dpi, x + (w - 8 * dpi) * split + 2 * dpi, y + h / 2 + 10 * dpi, BLACK);
-							DrawLine(x + (w - 8 * dpi) * split + 6 * dpi, y + h / 2 - 10 * dpi, x + (w - 8 * dpi) * split + 6 * dpi, y + h / 2 + 10 * dpi, BLACK);
+							position = 1.0 * (GetMouseX() - x - 4 * dpi) / (w - 8 * dpi);
+							if (position < 0)position = 0;
+							if (position > 1)position = 1;
+							lo1->Draw_Auto_Extra(x, y, (w - 8 * dpi) * position, h, check && !moving);
+							lo2->Draw_Auto_Extra(x + (w - 8 * dpi) * position + 8 * dpi, y, (w - 8 * dpi) * (1 - position), h, check && !moving);
+							DrawRectangle(x + (w - 8 * dpi) * position, y, 8 * dpi, h, LIGHTGRAY);
+							DrawLine(x + (w - 8 * dpi) * position + 2 * dpi, y + h / 2 - 10 * dpi, x + (w - 8 * dpi) * position + 2 * dpi, y + h / 2 + 10 * dpi, BLACK);
+							DrawLine(x + (w - 8 * dpi) * position + 6 * dpi, y + h / 2 - 10 * dpi, x + (w - 8 * dpi) * position + 6 * dpi, y + h / 2 + 10 * dpi, BLACK);
 							MouseCursorStyle = MOUSE_CURSOR_RESIZE_EW;
 							if (!IsMouseDown(MOUSE_BUTTON_LEFT))moving = false;
 						} else {
-							lo1->Draw(x, y, (w - 8 * dpi) * split, h, check && !moving);
-							lo2->Draw(x + (w - 8 * dpi) * split + 8 * dpi, y, (w - 8 * dpi) * (1 - split), h, check && !moving);
-							special_effect::DrawMouseRectangle_onlyLight(x + (w - 8 * dpi) * split, y, 8 * dpi, h);
-							DrawLine(x + (w - 8 * dpi) * split + 2 * dpi, y + h / 2 - 10 * dpi, x + (w - 8 * dpi) * split + 2 * dpi, y + h / 2 + 10 * dpi, DARKGRAY);
-							DrawLine(x + (w - 8 * dpi) * split + 6 * dpi, y + h / 2 - 10 * dpi, x + (w - 8 * dpi) * split + 6 * dpi, y + h / 2 + 10 * dpi, DARKGRAY);
-							if (MouseInRect(x + (w - 8 * dpi) * split, y, 8 * dpi, h) && check) {
-								DrawRectangle(x + (w - 8 * dpi) * split + dpi, y, 6 * dpi, h, Fade(LIGHTGRAY, 0.25));
+							lo1->Draw_Auto_Extra(x, y, (w - 8 * dpi) * position, h, check && !moving);
+							lo2->Draw_Auto_Extra(x + (w - 8 * dpi) * position + 8 * dpi, y, (w - 8 * dpi) * (1 - position), h, check && !moving);
+							special_effect::DrawMouseRectangle_onlyLight(x + (w - 8 * dpi) * position, y, 8 * dpi, h);
+							DrawLine(x + (w - 8 * dpi) * position + 2 * dpi, y + h / 2 - 10 * dpi, x + (w - 8 * dpi) * position + 2 * dpi, y + h / 2 + 10 * dpi, DARKGRAY);
+							DrawLine(x + (w - 8 * dpi) * position + 6 * dpi, y + h / 2 - 10 * dpi, x + (w - 8 * dpi) * position + 6 * dpi, y + h / 2 + 10 * dpi, DARKGRAY);
+							if (MouseInRect(x + (w - 8 * dpi) * position, y, 8 * dpi, h) && check) {
+								DrawRectangle(x + (w - 8 * dpi) * position + dpi, y, 6 * dpi, h, Fade(LIGHTGRAY, 0.25));
 								MouseCursorStyle = MOUSE_CURSOR_RESIZE_EW;
 								if (IsMousePressed(MOUSE_BUTTON_LEFT))moving = true;
 							}
 						}
 					} else {
-						lo1->Draw(x, y, w * split, h, check);
-						lo2->Draw(x + w * split, y, w * (1 - split), h, check);
+						lo1->Draw_Auto_Extra(x, y, w * position, h, check);
+						lo2->Draw_Auto_Extra(x + w * position, y, w * (1 - position), h, check);
 					}
 				} else if (split_style == split_col) {
 					if (movable) {
 						if (moving) {
 							MouseCursorStyle = MOUSE_CURSOR_RESIZE_NS;
-							split = 1.0 * (GetMouseY() - y - 4 * dpi) / (h - 8 * dpi);
-							if (split < 0)split = 0;
-							if (split > 1)split = 1;
-							lo1->Draw(x, y, w, (h - 8 * dpi) * split, check && !moving);
-							lo2->Draw(x, y + (h - 8 * dpi) * split + 8 * dpi, w, (h - 8 * dpi) * (1 - split), check && !moving);
-							DrawRectangle(x, y + (h - 8 * dpi) * split, w, 8 * dpi, LIGHTGRAY);
-							DrawLine(x + w / 2 - 10 * dpi, y + (h - 8 * dpi) * split + 2 * dpi, x + w / 2 + 10 * dpi, y + (h - 8 * dpi) * split + 2 * dpi, BLACK);
-							DrawLine(x + w / 2 - 10 * dpi, y + (h - 8 * dpi) * split + 6 * dpi, x + w / 2 + 10 * dpi, y + (h - 8 * dpi) * split + 6 * dpi, BLACK);
+							position = 1.0 * (GetMouseY() - y - 4 * dpi) / (h - 8 * dpi);
+							if (position < 0)position = 0;
+							if (position > 1)position = 1;
+							lo1->Draw_Auto_Extra(x, y, w, (h - 8 * dpi) * position, check && !moving);
+							lo2->Draw_Auto_Extra(x, y + (h - 8 * dpi) * position + 8 * dpi, w, (h - 8 * dpi) * (1 - position), check && !moving);
+							DrawRectangle(x, y + (h - 8 * dpi) * position, w, 8 * dpi, LIGHTGRAY);
+							DrawLine(x + w / 2 - 10 * dpi, y + (h - 8 * dpi) * position + 2 * dpi, x + w / 2 + 10 * dpi, y + (h - 8 * dpi) * position + 2 * dpi, BLACK);
+							DrawLine(x + w / 2 - 10 * dpi, y + (h - 8 * dpi) * position + 6 * dpi, x + w / 2 + 10 * dpi, y + (h - 8 * dpi) * position + 6 * dpi, BLACK);
 							if (!IsMouseDown(MOUSE_BUTTON_LEFT))moving = false;
 						} else {
-							lo1->Draw(x, y, w, (h - 8 * dpi) * split, check && !moving);
-							lo2->Draw(x, y + (h - 8 * dpi) * split + 8 * dpi, w, (h - 8 * dpi) * (1 - split), check && !moving);
-							special_effect::DrawMouseRectangle_onlyLight(x, y + (h - 8 * dpi) * split, w, 8 * dpi);
-							DrawLine(x + w / 2 - 10 * dpi, y + (h - 8 * dpi) * split + 2 * dpi, x + w / 2 + 10 * dpi, y + (h - 8 * dpi) * split + 2 * dpi, DARKGRAY);
-							DrawLine(x + w / 2 - 10 * dpi, y + (h - 8 * dpi) * split + 6 * dpi, x + w / 2 + 10 * dpi, y + (h - 8 * dpi) * split + 6 * dpi, DARKGRAY);
-							if (MouseInRect(x, y + (h - 8 * dpi) * split, w, 8 * dpi) && check) {
-								DrawRectangle(x, y + (h - 8 * dpi) * split + dpi, w, 6 * dpi, Fade(LIGHTGRAY, 0.25));
+							lo1->Draw_Auto_Extra(x, y, w, (h - 8 * dpi) * position, check && !moving);
+							lo2->Draw_Auto_Extra(x, y + (h - 8 * dpi) * position + 8 * dpi, w, (h - 8 * dpi) * (1 - position), check && !moving);
+							special_effect::DrawMouseRectangle_onlyLight(x, y + (h - 8 * dpi) * position, w, 8 * dpi);
+							DrawLine(x + w / 2 - 10 * dpi, y + (h - 8 * dpi) * position + 2 * dpi, x + w / 2 + 10 * dpi, y + (h - 8 * dpi) * position + 2 * dpi, DARKGRAY);
+							DrawLine(x + w / 2 - 10 * dpi, y + (h - 8 * dpi) * position + 6 * dpi, x + w / 2 + 10 * dpi, y + (h - 8 * dpi) * position + 6 * dpi, DARKGRAY);
+							if (MouseInRect(x, y + (h - 8 * dpi) * position, w, 8 * dpi) && check) {
+								DrawRectangle(x, y + (h - 8 * dpi) * position + dpi, w, 6 * dpi, Fade(LIGHTGRAY, 0.25));
 								MouseCursorStyle = MOUSE_CURSOR_RESIZE_NS;
 								if (IsMousePressed(MOUSE_BUTTON_LEFT))moving = true;
 							}
 						}
 					} else {
-						lo1->Draw(x, y, w, h * split, check);
-						lo2->Draw(x, y + h * split, w, h * (1 - split), check);
+						lo1->Draw_Auto_Extra(x, y, w, h * position, check);
+						lo2->Draw_Auto_Extra(x, y + h * position, w, h * (1 - position), check);
 					}
 				}
 				return h;
@@ -7625,7 +7581,7 @@ namespace ggcc {
 				SetConfigFlags(FLAG_MSAA_4X_HINT);
 				SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 				if (EnableRaylibLog) SetTraceLogLevel(LOG_ALL);
-				else SetTraceLogLevel(LOG_WARNING);
+				else SetTraceLogLevel(LOG_ERROR);
 				InitWindow(winw, winh, "GGCC UI - Debugger");
 				Vector2 v = GetWindowPosition();
 				realn k = GetWindowScaleDPI().x;
@@ -7793,7 +7749,7 @@ namespace ggcc {
 				if (FontName == "隶书")fontFileData = LoadFileData("C:/windows/fonts/simli.ttf", &fileSize);
 				if (FontName == "楷体")fontFileData = LoadFileData("C:/windows/fonts/simkai.ttf", &fileSize);
 				int codepointsCount;
-				int *codepoints = LoadCodepoints(UseCharacter.Text().c_str(), &codepointsCount);
+				int *codepoints = LoadCodepoints((UseCharacter.Text()).c_str(), &codepointsCount);
 				font = LoadFontFromMemory(".ttf", fontFileData, fileSize, TextHeight, codepoints, codepointsCount);
 				UnloadFileData(fontFileData);
 				UnloadCodepoints(codepoints);
@@ -7811,7 +7767,7 @@ namespace ggcc {
 				int fileSize;
 				unsigned char *fontFileData = LoadFileData("c:\\windows\\fonts\\seguiemj.ttf", &fileSize);
 				int codepointsCount;
-				int *codepoints = LoadCodepoints((UseEmoji.Text() + u8"🐇🐈🐊🐋🐎").c_str(), &codepointsCount);
+				int *codepoints = LoadCodepoints((UseEmoji.Text() + u8"!\"#$%").c_str(), &codepointsCount);
 				IconFont = LoadFontFromMemory(".ttf", fontFileData, fileSize, TextHeight, codepoints, codepointsCount);
 				UnloadCodepoints(codepoints);
 				UnloadFileData(fontFileData);
@@ -7938,38 +7894,13 @@ namespace ggcc {
 			EndAddElement();
 			return *win;
 		}
-		void BeginLeft(ui::Element* ele, realn pos) {
-			GetFatherLayout()->split = pos;
-			GetFatherLayout()->Split(ui::split_row, ele, GetFatherLayout()->page2());
-			BeginLayout(GetFatherLayout()->lo1);
-			EndLayout();
-		}
-		void BeginRight(ui::Element* ele, realn pos) {
-			GetFatherLayout()->split = 1 - pos;
-			GetFatherLayout()->Split(ui::split_row, GetFatherLayout()->page1(), ele);
-			BeginLayout(GetFatherLayout()->lo2);
-			EndLayout();
-		}
-		void BeginMain(ui::Element* ele) {
-			GetFatherLayout()->Set(ele);
-			BeginLayout(GetFatherLayout());
-			EndLayout();
-		}
-		void BeginTop(ui::Element* ele, realn pos) {
-			GetFatherLayout()->split = pos;
-			GetFatherLayout()->Split(ui::split_col, ele, GetFatherLayout()->page2());
-			BeginLayout(GetFatherLayout()->lo1);
-			EndLayout();
-		}
-		void BeginBottom(ui::Element* ele, realn pos) {
-			GetFatherLayout()->split = 1 - pos;
-			GetFatherLayout()->Split(ui::split_col, GetFatherLayout()->page1(), ele);
-			BeginLayout(GetFatherLayout()->lo2);
-			EndLayout();
-		}
-		ui::Layout &Layout(ui::SplitStyle style, ui::Element* ele1, ui::Element* ele2) {
+		ui::Layout &Layout(std::function<void()> func) {
 			ui::Layout* temp = new ui::Layout();
-			temp->Split(style, ele1, ele2);
+			ui::this_layout = temp;
+			temp->ClearKey();
+			BeginAddElement(temp);
+			if (func)func();
+			EndAddElement();
 			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			return *temp;
 		}
