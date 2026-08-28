@@ -4,54 +4,30 @@
 #pragma once
 
 #include <functional>
-#include <ctime>
 #include <cmath>
+#include <chrono>
 
 using realn = float;
 
 namespace ggcc {
 
 	// 计时器
-	unsigned long long StartGClcok = 0;
-	unsigned long long LastUpdateGClock = 0;
-	long long LastRecordGClock = 0;
-	long long GClockInterval = 0;
-	bool GClockInited = false;
+	auto StartGClcok = std::chrono::high_resolution_clock::now();
+	auto LastRecordGClock = std::chrono::high_resolution_clock::now();
+	auto GClockInterval = LastRecordGClock - StartGClcok;
 	long long gclock() {
-//		if (!GClockInited) {
-//			GClockInited = true;
-//			timespec tp;
-//			clock_gettime(CLOCK_REALTIME, &tp);
-//			StartGClcok = (unsigned long long)(tp.tv_sec) * 1000 + (unsigned long long)(tp.tv_nsec / 1000000);
-//			LastUpdateGClock = StartGClcok;
-//			return 0;
-//		}
-//		timespec tp;
-//		clock_gettime(CLOCK_REALTIME, &tp);
-//		unsigned long long now = tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
-//		return (long long)(now - StartGClcok);
-		return clock();
+		auto now = std::chrono::high_resolution_clock::now();
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - StartGClcok);
+		return duration.count();
 	}
 	void update_gclock() {
-//		if (!GClockInited) {
-//			GClockInited = true;
-//			timespec tp;
-//			clock_gettime(CLOCK_REALTIME, &tp);
-//			StartGClcok = (unsigned long long)(tp.tv_sec) * 1000 + (unsigned long long)(tp.tv_nsec / 1000000);
-//			LastUpdateGClock = StartGClcok;
-//		} else {
-//			timespec tp;
-//			clock_gettime(CLOCK_REALTIME, &tp);
-//			unsigned long long now = tp.tv_sec * 1000 + tp.tv_nsec / 1000000;
-//			if (now - LastUpdateGClock > 100) StartGClcok += now - LastUpdateGClock - 16;
-//			LastUpdateGClock = now;
-//		}
-//		long long tmp = gclock();
-//		GClockInterval = tmp - LastRecordGClock;
-//		LastRecordGClock = tmp;
+		auto now = std::chrono::high_resolution_clock::now();
+		GClockInterval = now - LastRecordGClock;
+		LastRecordGClock = now;
 	}
 	long long gclock_interval() {
-		return GClockInterval;
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(GClockInterval);
+		return duration.count();
 	}
 
 	// 动画函数
@@ -69,70 +45,70 @@ namespace ggcc {
 			}
 		};
 		// 瞬间动画
-		AniPara moment{0, 1, [](realn x) {
+		const AniPara moment{0, 1, [](realn x) {
 				return x <= 0 ? 0 : 1;
 			}};
 		// 线性动画
-		AniPara linear{0, 1, [](realn x) {
+		const AniPara linear{0, 1, [](realn x) {
 			return x;
 		}};
 		// 经典动画（先快后慢）
-		AniPara classics {10, 0, [](realn x) {
+		const AniPara classics {10, 0, [](realn x) {
 			return std::pow(1.618, x);
 		}};
 		// 经典动画（先慢后快）
-		AniPara classics_r {10, 0, [](realn x) {
+		const AniPara classics_r {10, 0, [](realn x) {
 			return std::pow(1.618, x);
 		}};
 		// 经典动画（先慢后快再快）
-		AniPara classics_d {0, 20, [](realn x) {
+		const AniPara classics_d {0, 20, [](realn x) {
 			if (x < 10) return std::pow(1.618, x);
 			return std::pow(1.618, 10) * 2 - std::pow(1.618, 20 - x) + 1;
 		}};
 		// sin函数动画
-		AniPara sine {-3.1415926 / 2, 3.1415926 / 2, [](realn x) {
+		const AniPara sine {-3.1415926 / 2, 3.1415926 / 2, [](realn x) {
 			return std::sin(x);
 		}};
 		// tan函数动画
-		AniPara tanf { -1.35, 1.35, [](realn x) {
+		const AniPara tanf { -1.35, 1.35, [](realn x) {
 			return std::tan(x);
 		}};
 		// tanh函数动画
-		AniPara tanh {-2.5, 2.5, [](realn x) {
+		const AniPara tanh {-2.5, 2.5, [](realn x) {
 			return std::tanh(x);
 		}};
 		// 回弹动画（阻力5）
-		AniPara bounce {-8.9726, 0, [](realn x) {
+		const AniPara bounce {-8.9726, 0, [](realn x) {
 			return -7.0 / 51 * std::sqrt(51) * std::exp(-7.0 / 10 * x) * std::sin(1.0 / 10 * sqrt(51) * x) - std::exp(-7.0 / 10 * x) * std::cos(1.0 / 10 * std::sqrt(51) * x);
 		}};
 		// 回弹动画（阻力5）
-		AniPara bounce1 {-8.9726, 0, [](realn x) {
+		const AniPara bounce1 {-8.9726, 0, [](realn x) {
 			return -7.0 / 51 * std::sqrt(51) * std::exp(-7.0 / 10 * x) * std::sin(1.0 / 10 * sqrt(51) * x) - std::exp(-7.0 / 10 * x) * std::cos(1.0 / 10 * std::sqrt(51) * x);
 		}};
 		// 回弹动画（阻力4）
-		AniPara bounce2 {-8.2645, 0, [](realn x) {
+		const AniPara bounce2 {-8.2645, 0, [](realn x) {
 			return -13.0 / 231 * std::sqrt(231) * std::exp(-13.0 / 20 * x) * std::sin(1.0 / 20 * std::sqrt(231) * x) - std::exp(-13.0 / 20 * x) * std::cos(1.0 / 20 * std::sqrt(231) * x);
 		}};
 		// 回弹动画（阻力3）
-		AniPara bounce3 {-7.9188, 0, [](realn x) {
+		const AniPara bounce3 {-7.9188, 0, [](realn x) {
 			return -3.0 / 4 * std::exp(-3.0 / 5 * x) * std::sin(4.0 / 5 * x) - std::exp(-3.0 / 5 * x) * std::cos(4.0 / 5 * x);
 		}};
 		// 回弹动画（阻力2）
-		AniPara bounce4 {-7.5220, 0, [](realn x) {
+		const AniPara bounce4 {-7.5220, 0, [](realn x) {
 			return -11.0 / 93 * std::sqrt(31) * std::exp(-11.0 / 20 * x) * std::sin(3.0 / 20 * std::sqrt(31) * x) - std::exp(-11.0 / 20 * x) * std::cos(3.0 / 20 * std::sqrt(31) * x);
 		}};
 		// 回弹动画（阻力2）
-		AniPara bounce5 {-7.3448, 0, [](realn x) {
+		const AniPara bounce5 {-7.3448, 0, [](realn x) {
 			return -1.0 / 3 * std::sqrt(3) * std::exp(-1.0 / 2 * x) * std::sin(1.0 / 2 * std::sqrt(3) * x) - std::exp(-1.0 / 2 * x) * std::cos(1.0 / 2 * std::sqrt(3) * x);
 		}};
 		// G3动画（左连右连）
-		AniPara g3 {0, 3.14159 * 2, [](realn x) {
+		const AniPara g3 {0, 3.14159 * 2, [](realn x) {
 			return x - std::sin(x);
 		}};
-		AniPara g3r {3.14158, 3.14159 * 2, [](realn x) {
+		const AniPara g3r {3.14158, 3.14159 * 2, [](realn x) {
 			return x - std::sin(x);
 		}};
-		AniPara g3l {0, 3.14159, [](realn x) {
+		const AniPara g3l {0, 3.14159, [](realn x) {
 			return x - std::sin(x);
 		}};
 	}
