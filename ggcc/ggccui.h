@@ -486,10 +486,11 @@ namespace ggcc {
 			EndScissorMode();
 			BeginScissorMode(ax, ay, aw, ah);
 			if (DebugMode) {
-				std::string text = wp::tostr(vector2d{(realn)ScissorDeep, (realn)0});
+				std::string text = "DEEP=" + wp::tostr(ScissorDeep) + ",SIZE=" + wp::tostr(vector2d(aw, ah));
 				DrawRectangle(ax, ay, aw, ah, Fade(RED, 0.02));
 				Print(
-				    ax + aw / 2 - text.size() * TextHeight / 4, ay + ah / 2 - TextHeight / 2,
+				    ax + aw / 2 - text.size() * TextHeight / 4,
+				    ay + ah / 2 - TextHeight / 2 + UnitHeight * (ScissorDeep - 1),
 				    text, BLUE
 				);
 			}
@@ -2516,8 +2517,9 @@ namespace ggcc {
 			~Head() {
 				UnloadFont(ofont);
 			}
-			void SetSize(int size) {
+			Head& SetSize(int size) {
 				h = size;
+				return *this;
 			}
 			int Draw(int x, int y, int w = 600, bool check = true) {
 				if (content != last_text) {
@@ -2560,53 +2562,120 @@ namespace ggcc {
 			OrderedText() {}
 			int Draw(int x, int y, int w = 600, bool check = true) {
 				ui::Print_All_String(x, y + (UnitHeight - TextHeight) / 2, number, ThemeColor);
+				if (content == "") return UnitHeight + SpaceSize;
 				int occupy = wp::strLen(number) * ui::TextHeight / 2 + SpaceSize;
-				height = PrintRect(x + occupy, y, w - occupy, content) * ui::UnitHeight;
+				height = PrintRect(x + occupy, y, w - occupy, content) * (ui::UnitHeight + ui::SpaceSize);
 				width = wp::strLen(content) * TextHeight / 2 + TextHeight;
 				return height;
 			}
 		};
 		class ColorText : public Element {
-		public:
+		private:
 			std::string icon = "";					// 显示图标
-			bool click = false;						// 是否点击
+			bool underline_visible = false;			// 是否显示下划线
+			bool strikeoutline_visible = false;		// 是否显示删除线
+			bool sparkle_enable = false;			// 是否闪烁
 			bool click_enable = false;				// 是否可以点击（设为true后，悬浮会有阴影）
+			bool click = false;						// 是否点击
+			int interval = 0;						// 间隔大小
 			Color color = ui::TextColor2;			// 文本颜色
-			ColorText(std::string text_ = "text", Color color_ = ui::TextColor2) {
-				icon = "";
-				content = text_;
+			Color bgcolor = BLANK;					// 背景颜色
+			std::function <void()> callback = nullptr; // 回调函数
+		public:
+			ColorText() {}
+			ColorText(std::string text_, Color color_ = ui::TextColor2, Color bgcolor_ = BLANK) {
+				if (text_.find('[') == 0 && text_.find(']') != -1) {
+					icon = text_.substr(1, text_.find(']') - 1);
+					content = text_.substr(text_.find(']') + 1);
+				} else {
+					content = text_;
+					icon = "";
+				}
 				color = color_;
+				bgcolor = bgcolor_;
 			}
-			ColorText(std::string icon_, std::string text_, Color color_ = ui::TextColor2) {
-				icon = icon_;
-				content = text_;
+			ColorText& SetColor(Color color_) {
 				color = color_;
+				return *this;
+			}
+			ColorText& SetBgColor(Color bgcolor_) {
+				bgcolor = bgcolor_;
+				return *this;
+			}
+			ColorText& SetUnderlineVisible(bool on) {
+				underline_visible = on;
+				return *this;
+			}
+			ColorText& SetStrikeoutlineVisible(bool on) {
+				strikeoutline_visible = on;
+				return *this;
+			}
+			ColorText& SetSparkleEnable(bool on) {
+				sparkle_enable = on;
+				return *this;
 			}
 			ColorText& SetClickEnable(bool on) {
 				click_enable = on;
 				return *this;
 			}
+			ColorText& SetInterval(int interval_) {
+				interval = interval_;
+				return *this;
+			}
+			ColorText& withCallback(std::function <void()> callback_) {
+				callback = callback_;
+				return *this;
+			}
+			bool Click() {
+				return click;
+			}
 			int Draw(int x, int y, int w = 600, bool check = true) {
 				int rx = 0;
+				Color color2 = color;
+				if (sparkle_enable) color2 = ColorF(color, sin(GetTime() * PI) * 0.4f + 0.6f);
+				if (bgcolor.a != 0) DrawRectangle(x, y, std::min(width, w), height, ColorF(bgcolor));
 				if (icon != "") {
 					int t = (UnitHeight - TextHeight) / 2;
-					PrintIcon(x, y + t, icon, color);
+					PrintIcon(x + interval, y + t + interval, icon, color2);
 					rx = TextHeight + SpaceSize;
 					x += rx;
 				}
-				height = PrintRect(x, y, w, content, ColorF(color)) * ui::UnitHeight;
+				int lines = PrintRect(x + interval, y + interval, w - rx - interval * 2, content, color2);
+				height = lines * (UnitHeight + SpaceSize) - SpaceSize;
+				vector2d size = GetPrintRectSize(x + interval, y + interval, w - rx - interval * 2, content);
+				if (underline_visible) {
+					for (int i = 0; i < lines; i++) {
+						DrawLineEx(
+						    Vector2{(x - rx + interval) * 1.0f, (y + i * (UnitHeight + SpaceSize) + interval) * 1.0f + UnitHeight * 1.0f},
+						    Vector2{(x + std::min(size.x, realn(w - rx - interval * 2))) * 1.0f, (y + i * (UnitHeight + SpaceSize) + interval) * 1.0f + UnitHeight * 1.0f},
+						    dpi, color2
+						);
+					}
+				}
+				if (strikeoutline_visible) {
+					for (int i = 0; i < lines; i++) {
+						DrawLineEx(
+							Vector2{(x - rx + interval) * 1.0f, (y + i * (UnitHeight + SpaceSize) + interval) * 1.0f + UnitHeight * 0.5f},
+							Vector2{(x + std::min(size.x, realn(w - rx - interval * 2))) * 1.0f, (y + i * (UnitHeight + SpaceSize) + interval) * 1.0f + UnitHeight * 0.5f},
+							dpi, color2
+							);
+					}
+				}
 				click = false;
-				vector2d size = GetPrintRectSize(x, y, w, content);
 				if (click_enable) {
-					if (MouseInRect(x - rx, y, size.x + rx, size.y)) {
-						DrawRectangle(x - rx, y, size.x + rx, size.y, ColorF(ChooseColor));
-						if (IsMousePressed(MOUSE_BUTTON_LEFT))click = true;
-						if (IsMouseDown(MOUSE_BUTTON_LEFT))DrawRectangle(x - rx, y, size.x + rx, size.y, ColorF(ChooseColor));
+					ui::special_effect::DrawMouseBox(x - rx, y, size.x + rx + interval * 2, size.y + interval * 2);
+					if (MouseInRect(x - rx, y, size.x + rx + interval * 2, size.y + interval * 2)) {
+						DrawRectangle(x - rx, y, size.x + rx + interval * 2, size.y + interval * 2, ColorF(ChooseColor));
+						if (IsMousePressed(MOUSE_BUTTON_LEFT)) {
+							click = true;
+							if (callback) callback();
+						}
+						if (IsMouseDown(MOUSE_BUTTON_LEFT))DrawRectangle(x - rx, y, size.x + rx + interval * 2, size.y + interval * 2, ColorF(ChooseColor));
 					}
 				}
 				width = wp::strLen(content) * TextHeight / 2;
-				if (icon != "")width += TextHeight + SpaceSize;
-				return height;
+				if (icon != "") width += TextHeight + SpaceSize + interval * 2;
+				return height + interval * 2;
 			}
 		};
 		class Line : public Element {
@@ -2786,13 +2855,13 @@ namespace ggcc {
 				content = text_;
 			}
 			int Draw(int x, int y, int w, bool check = true) {
-				int h = (ui::UnitHeight - ui::TextHeight) / 2;
-				height = ui::GetPrintRectLine(x + ui::SpaceSize + ui::UnitHeight, y + ui::SpaceSize * 3 / 2, w - ui::SpaceSize * 2 - ui::UnitHeight, content) * ui::UnitHeight;
-				DrawRectangle(x, y + ui::SpaceSize / 2, w, height + ui::SpaceSize * 2, ColorF(255, 153, 0, 100));
-				ui::PrintIcon(x + ui::SpaceSize, y + ui::SpaceSize * 3 / 2 + height / 2 - ui::TextHeight / 2, u8"");
-				ui::PrintRect(x + ui::SpaceSize + ui::UnitHeight, y + ui::SpaceSize * 3 / 2, w - ui::SpaceSize * 2 - ui::UnitHeight, content);
-				height += ui::SpaceSize * 3;
-				return height + ui::SpaceSize;
+				int h = (UnitHeight - TextHeight) / 2;
+				height = GetPrintRectLine(x + SpaceSize + UnitHeight, y + SpaceSize * 3 / 2, w - SpaceSize * 2 - UnitHeight, content) * UnitHeight;
+				DrawRectangle(x, y + SpaceSize / 2, w, height + SpaceSize * 2, ColorF(255, 153, 0, 100));
+				PrintIcon(x + SpaceSize * 2, y + SpaceSize * 3 / 2 + height / 2 - TextHeight / 2, u8"");
+				PrintRect(x + SpaceSize * 4 + TextHeight, y + SpaceSize * 3 / 2, w - SpaceSize * 4 - UnitHeight, content);
+				height += SpaceSize * 3;
+				return height + SpaceSize;
 			}
 		};
 		class Error : public ui::Element {
@@ -2801,13 +2870,13 @@ namespace ggcc {
 				content = text_;
 			}
 			int Draw(int x, int y, int w, bool check = true) {
-				int h = (ui::UnitHeight - ui::TextHeight) / 2;
-				height = ui::GetPrintRectLine(x + ui::SpaceSize + ui::UnitHeight, y + ui::SpaceSize * 3 / 2, w - ui::SpaceSize * 2 - ui::UnitHeight, content) * ui::UnitHeight;
-				DrawRectangle(x, y + ui::SpaceSize / 2, w, height + ui::SpaceSize * 2, ColorF(192, 44, 56, 100));
-				ui::PrintIcon(x + ui::SpaceSize, y + ui::SpaceSize * 3 / 2 + height / 2 - ui::TextHeight / 2, u8"");
-				ui::PrintRect(x + ui::SpaceSize + ui::UnitHeight, y + ui::SpaceSize * 3 / 2, w - ui::SpaceSize * 2 - ui::UnitHeight, content);
-				height += ui::SpaceSize * 3;
-				return height + ui::SpaceSize;
+				int h = (UnitHeight - TextHeight) / 2;
+				height = GetPrintRectLine(x + SpaceSize + UnitHeight, y + SpaceSize * 3 / 2, w - SpaceSize * 2 - UnitHeight, content) * UnitHeight;
+				DrawRectangle(x, y + SpaceSize / 2, w, height + SpaceSize * 2, ColorF(192, 44, 56, 100));
+				PrintIcon(x + SpaceSize * 2, y + SpaceSize * 3 / 2 + height / 2 - TextHeight / 2, u8"");
+				PrintRect(x + SpaceSize * 4 + TextHeight, y + SpaceSize * 3 / 2, w - SpaceSize * 4 - UnitHeight, content);
+				height += SpaceSize * 3;
+				return height + SpaceSize;
 			}
 		};
 		class LoadingBar : public Element {
@@ -2877,9 +2946,8 @@ namespace ggcc {
 			realn minn = 0;
 			realn maxn = 10;
 			realn* ptr = nullptr;
-			bool text_visible = true;
-			Slider(std::string text_ = "Slider", realn minn_ = 0, realn maxn_ = 10, realn now_ = 0, realn* ptr_ = nullptr) {
-				content = text_;
+			bool text_visible = false;
+			Slider(realn minn_ = 0, realn maxn_ = 10, realn now_ = 0, realn* ptr_ = nullptr) {
 				minn = minn_;
 				maxn = maxn_;
 				num = now_;
@@ -2901,8 +2969,8 @@ namespace ggcc {
 				move.stp((cw - UnitHeight / 5) * (num - minn) / (maxn - minn));
 				realn k = move.gnp();
 				DrawRectangle(x, y + UnitHeight / 2 - h2 / 2, cw, h2, ColorF(GRAY));
-				DrawRectangle(x, y + UnitHeight / 2 - h2 / 2, k, h2, ColorF(MainColor));
-				DrawRectangle(x + k, y + h / 2, UnitHeight / 5, UnitHeight - h, ColorF(MainColor));
+				DrawRectangle(x, y + UnitHeight / 2 - h2 / 2, k, h2, ColorF(ThemeColor));
+				DrawRectangle(x + k, y, UnitHeight / 5, UnitHeight, ColorF(ThemeColor));
 				if (text_visible) {
 					Print(x + cw + SpaceSize, y + h, content, TextColor);
 					DrawRectangle(x + w - nw, y + h / 2, nw, UnitHeight - h, ColorF(TextColor2));
@@ -2912,18 +2980,18 @@ namespace ggcc {
 					if (t.size() > 4)t.resize(4);
 					Print(x + w - nw + h, y + h, t, MainColor);
 				}
-				if (MouseInRect(x, y + h / 2, cw, UnitHeight - h) && check) {
-					if (IsMousePressed(MOUSE_BUTTON_LEFT))ChooseSlider = this;
-					DrawRectangle(x + k, y + h / 2, UnitHeight / 5, UnitHeight - h, ColorF(WHITE));
+				if (MouseInRect(x, y, cw, UnitHeight) && check) {
+					if (IsMousePressed(MOUSE_BUTTON_LEFT)) ChooseSlider = this;
+					DrawRectangle(x + k, y, UnitHeight / 5, UnitHeight, ColorF(WHITE));
 				}
-				if (ChooseSlider == this && check) {
+				if (ChooseSlider == this) {
 					realn kx = 1.0 * (Mouse.x - x - UnitHeight / 10) * (maxn - minn) / (cw - UnitHeight / 5) + minn;
 					num = kx;
-					DrawRectangle(x + k, y + h / 2, UnitHeight / 5, UnitHeight - h, ColorF(WHITE));
+					DrawRectangle(x + k, y, UnitHeight / 5, UnitHeight, ColorF(WHITE));
 				}
 				if (num < minn)num = minn;
 				if (num > maxn)num = maxn;
-				if (IsMouseReleased(MOUSE_BUTTON_LEFT))ChooseSlider = nullptr;
+				if (!IsMouseDown(MOUSE_BUTTON_LEFT)) ChooseSlider = nullptr;
 				if (ptr)(*ptr) = num;
 				return UnitHeight;
 			}
@@ -2934,8 +3002,8 @@ namespace ggcc {
 			int minn = 0;
 			int maxn = 10;
 			int* ptr = nullptr;
-			Slider_Int(std::string text_ = "Slider", int minn_ = 0, int maxn_ = 10, int now_ = 0, int* ptr_ = nullptr) {
-				content = text_;
+			bool text_visible = false;
+			Slider_Int(int minn_ = 0, int maxn_ = 10, int now_ = 0, int* ptr_ = nullptr) {
 				minn = minn_;
 				maxn = maxn_;
 				num = now_;
@@ -2950,20 +3018,24 @@ namespace ggcc {
 				int cw = w * 0.6;
 				int nw = UnitHeight * 1.7;
 				realn h2 = UnitHeight / 6;
+				if (text_visible)cw = w * 0.6;
+				else cw = w;
 				move.sd(200);
 				move.Update();
 				move.stp((cw - UnitHeight / 5) * (num - minn) / (maxn - minn));
 				realn k = move.gnp();
-				Print(x + cw + SpaceSize, y + h, content, TextColor);
-				DrawRectangle(x, y + UnitHeight / 2 - h2 / 2, cw, h2, GRAY);
+				DrawRectangle(x, y + UnitHeight / 2 - h2 / 2, cw, h2, ColorF(GRAY));
 				DrawRectangle(x, y + UnitHeight / 2 - h2 / 2, k, h2, ColorF(MainColor));
 				DrawRectangle(x + k, y + h / 2, UnitHeight / 5, UnitHeight - h, ColorF(MainColor));
-				DrawRectangle(x + w - nw, y + h / 2, nw, UnitHeight - h, ColorF(TextColor2));
-				std::ostringstream out;
-				out << num;
-				std::string t = out.str();
-				t = t.substr(0, 5);
-				Print(x + w - nw + h, y + h, t, MainColor);
+				if (text_visible) {
+					Print(x + cw + SpaceSize, y + h, content, TextColor);
+					DrawRectangle(x + w - nw, y + h / 2, nw, UnitHeight - h, ColorF(TextColor2));
+					std::ostringstream out;
+					out << num;
+					std::string t = out.str();
+					t = t.substr(0, 5);
+					Print(x + w - nw + h, y + h, t, MainColor);
+				}
 				if (MouseInRect(x, y + h / 2, cw, UnitHeight - h) && check) {
 					if (IsMousePressed(MOUSE_BUTTON_LEFT))ChooseSlider = this;
 					DrawRectangle(x + k, y + h / 2, UnitHeight / 5, UnitHeight - h, ColorF(WHITE));
@@ -3000,8 +3072,8 @@ namespace ggcc {
 				move.Update();
 				Print(x, y + h, content);
 				DrawRectangle(x + w - nw, y + UnitHeight / 2 - h2 / 2, nw, h2, ColorF(GRAY));
-				DrawRectangle(x + w - nw, y + UnitHeight / 2 - h2 / 2, round(move.gnp()), h2, ColorF(MainColor));
-				DrawRectangle(x + w - nw + round(move.gnp()), y + h / 2, round(UnitHeight / 3.5), UnitHeight - h, ColorF(MainColor));
+				DrawRectangle(x + w - nw, y + UnitHeight / 2 - h2 / 2, round(move.gnp()), h2, ColorF(ThemeColor));
+				DrawRectangle(x + w - nw + round(move.gnp()), y + h / 2, round(UnitHeight / 3.5), UnitHeight - h, ColorF(ThemeColor));
 				if (MouseInRect(x + w - nw, y + h / 2, nw, UnitHeight - h) && check) {
 					DrawRectangle(x + w - nw + round(move.gnp()), y + h / 2, round(UnitHeight / 3.5), UnitHeight - h, ColorF(WHITE));
 					if (IsMousePressed(MOUSE_BUTTON_LEFT))on = !on;
@@ -5618,7 +5690,7 @@ namespace ggcc {
 			bool space_visible = false;				// 是否显示空白字符
 			bool tabline_visible = false;			// 是否显示缩进提示线
 			int label_width = 60 * dpi;				// 行号栏宽度
-			
+
 			TextBox& SetLabelVisible(bool on) {
 				label_visible = on;
 				return *this;
@@ -5939,55 +6011,55 @@ namespace ggcc {
 					aAni.stp(0);
 				}
 				if (draw_box_background) {
-					if (aAni.gnp() != 1)DrawRectangle(x, y + h, TextHeight, TextHeight, ColorF(20, 20, 20, 100));
-					if (aAni.gnp() != 0)DrawRectangle(x, y + h, TextHeight, TextHeight, ColorF(MainColor, aAni.gnp()));
-					special_effect::DrawMouseRectangle(x, y + h, TextHeight, TextHeight);
+					if (aAni.gnp() != 1) DrawRectangle(x + UnitHeight / 4, y + UnitHeight / 4, UnitHeight / 2, UnitHeight / 2, ColorF(MainColor));
+					if (aAni.gnp() != 0) DrawRectangle(x, y, UnitHeight, UnitHeight, ColorF(ThemeColor, aAni.gnp()));
+					special_effect::DrawMouseRectangle(x, y, UnitHeight, UnitHeight);
 				}
-				Print(x + TextHeight + SpaceSize, y + h, content);
+				Print(x + UnitHeight + SpaceSize * 2, y + h, content);
 				if (tickAni.gnp() > 0) {
 					realn t1 = std::min(tickAni.gnp(), (realn)0.4) / 0.4;
 					realn t2 = std::max(tickAni.gnp() - (realn)0.4, (realn)0) / 0.6;
-					int k = TextHeight;
-					vector2d p1 = vector2d(x + k * 0.2, y + k * 0.5 + h);
-					vector2d p2 = vector2d(x + k * 0.4, y + k * 0.8 + h);
-					vector2d p3 = vector2d(x + k * 0.8, y + k * 0.2 + h);
+					int k = UnitHeight;
+					vector2d p1 = vector2d(x + k * 0.2, y + k * 0.5);
+					vector2d p2 = vector2d(x + k * 0.4, y + k * 0.8);
+					vector2d p3 = vector2d(x + k * 0.8, y + k * 0.2);
 					DrawLineEx(_V(p1), _V(p1 + (p2 - p1)*t1), dpi, ColorF(WHITE));
 					DrawLineEx(_V(p2), _V(p2 + (p3 - p2)*t2), dpi, ColorF(WHITE));
 				}
-				if (check && MouseInRect(x, y, w, UnitHeight)) {
-					DrawRectangle(x, y + h, TextHeight, TextHeight, ColorF(ChooseColor));
+				if (check && MouseInRect(x, y, width, UnitHeight)) {
+					DrawRectangle(x, y, UnitHeight, UnitHeight, ColorF(ChooseColor));
 					if (IsMousePressed(MOUSE_BUTTON_LEFT)) {
 						choose = !choose;
 					}
 				}
-				width = wp::strLen(content) * TextHeight / 2 + TextHeight + SpaceSize;
+				if (ptr) *ptr = choose;
+				width = wp::strLen(content) * TextHeight / 2 + UnitHeight + SpaceSize * 2;
 				return UnitHeight;
 			}
 		};
 		class Hyperlink : public Element {
-		public:
+		private:
 			std::string link = "";				// 链接网址
 			Animation move;						// 底部划线动画
 			std::string icon = u8"";			// 图标
 			bool click = false;					// 是否点击
+			std::function <void()> callback = nullptr; // 回调函数
+		public:
 			Hyperlink() {}
-			Hyperlink(std::string text_) {
-				content = text_;
-				link = "";
-				icon = u8"";
-				move.sd(300);
-			}
 			Hyperlink(std::string text_, std::string link_) {
-				content = text_;
+				if (text_.find('[') == 0 && text_.find(']') != -1) {
+					icon = text_.substr(1, text_.find(']') - 1);
+					content = text_.substr(text_.find(']') + 1);
+				} else {
+					content = text_;
+					icon = u8"";
+				}
 				link = link_;
-				icon = u8"";
 				move.sd(300);
 			}
-			Hyperlink(std::string icon_, std::string text_, std::string link_) {
-				content = text_;
-				link = link_;
-				icon = icon_;
-				move.sd(300);
+			Hyperlink& withCallback(std::function <void()> callback_) {
+				callback = callback_;
+				return *this;
 			}
 			int Draw(int _x, int _y, int _w, bool check = true) {
 				float x = float(_x);
@@ -5998,18 +6070,21 @@ namespace ggcc {
 				click = false;
 				PrintIcon(x, y + h, icon, ColorF(177, 164, 246, 255));
 				Print(x + TextHeight + SpaceSize, y + h, content, ColorF(177, 164, 246, 255));
-				int wi = wp::strLen(content) * TextHeight / 2;
 				DrawLineEx(
-				{x + SpaceSize + TextHeight + wi / 2 - move.gnp()*wi / 2, y + h + TextHeight},
-				{x + SpaceSize + TextHeight + wi / 2 + move.gnp()*wi / 2, y + h + TextHeight},
-				dpi, ColorF(177, 164, 246, 255)
-				         );
-				if (MouseInRect(x + TextHeight + SpaceSize, y, wp::strLen(content) * TextHeight / 2, UnitHeight)) {
+				    Vector2{x + width / 2 - move.gnp() * width / 2, y + UnitHeight},
+				    Vector2{x + width / 2 + move.gnp() * width / 2, y + UnitHeight},
+				    dpi, ColorF(177, 164, 246, 255)
+				);
+				if (MouseInRect(x, y, width, UnitHeight)) {
 					move.stp(1);
 					MouseCursorStyle = MOUSE_CURSOR_POINTING_HAND;
+					if (IsMouseDown(MOUSE_BUTTON_LEFT)) {
+						DrawRectangle(x, y, width, UnitHeight, ColorF(ChooseColor));
+					}
 					if (IsMousePressed(MOUSE_BUTTON_LEFT)) {
 						if (link != "") OpenURL(link.c_str());
 						click = true;
+						if (callback) callback();
 					}
 				} else move.stp(0);
 				width = wp::strLen(content) * TextHeight / 2 + TextHeight + SpaceSize;
@@ -6025,17 +6100,17 @@ namespace ggcc {
 				float x = float(_x), y = float(_y), w = float(_w);
 				int h = (UnitHeight - TextHeight) / 2;
 				if (draw_box_background) {
-					DrawCircle(x + TextHeight / 2, y + h + TextHeight / 2, TextHeight / 2, ColorF(20, 20, 20, 255));
-					DrawRing({x + TextHeight / 2, y + h + TextHeight / 2}, std::min(TextHeight / 2 - int(choose_ani[id].gnp()*TextHeight / 3.0), TextHeight / 2), TextHeight / 2, 0, 360, 30,  ColorF(MainColor));
-					special_effect::DrawMouseCircle(x + TextHeight / 2, y + h + TextHeight / 2, TextHeight / 2);
+					if (choose != id) DrawCircle(x + UnitHeight / 2, y + UnitHeight / 2, UnitHeight / 4, ColorF(MainColor));
+					DrawRing({x + UnitHeight / 2, y + UnitHeight / 2}, std::min(UnitHeight / 2 - int(choose_ani[id].gnp()*UnitHeight / 3.0), UnitHeight / 2), UnitHeight / 2, 0, 360, 30,  ColorF(ThemeColor));
+					ui::special_effect::DrawMouseCircle(x + UnitHeight / 2, y + UnitHeight / 2, UnitHeight / 2);
 				} else {
 					BeginAlphaMode(choose_ani[id].gnp());
-					DrawCircle(x + TextHeight / 2, y + h + TextHeight / 2, TextHeight / 6, ColorF(WHITE));
+					DrawCircle(x + UnitHeight / 2, y + UnitHeight / 2, UnitHeight / 6, ColorF(WHITE));
 					EndAlphaMode();
 				}
-				Print(x + TextHeight + SpaceSize, y + h, rtext[id]);
-				if (check && MouseInRect(x, y, w, UnitHeight)) {
-					DrawCircle(x + TextHeight / 2, y + h + TextHeight / 2, TextHeight / 2, ColorF(ChooseColor));
+				Print(x + UnitHeight + SpaceSize * 2, y + h, rtext[id]);
+				if (check && MouseInRect(x, y, width, UnitHeight)) {
+					DrawCircle(x + UnitHeight / 2, y + UnitHeight / 2, UnitHeight / 2, ColorF(ChooseColor));
 					if (IsMousePressed(MOUSE_BUTTON_LEFT)) {
 						choose_ani[id].stp(1);
 						choose = id;
@@ -6063,13 +6138,13 @@ namespace ggcc {
 				int maxn = 0;
 				for (int i = 0; i < rtext.size(); i++) {
 					choose_ani[i].update();
-					DrawOne(i, x, y + UnitHeight * i, w, check);
+					DrawOne(i, x, y + (UnitHeight + SpaceSize) * i, w, check);
 					if (choose != i)choose_ani[i].stp(0);
 					maxn = std::max(maxn, wp::strLen(rtext[i]));
 				}
 				if (ptr)(*ptr) = choose;
-				width = maxn * TextHeight / 2 + TextHeight + SpaceSize;
-				return UnitHeight * rtext.size();
+				width = maxn * TextHeight / 2 + UnitHeight + SpaceSize * 2;
+				return (UnitHeight + SpaceSize) * rtext.size() - SpaceSize;
 			}
 		};
 		class Pulldown : public Priority {
@@ -6105,14 +6180,7 @@ namespace ggcc {
 				Height = UnitHeight;
 			}
 			Pulldown& AddButton(std::string content) {
-				Text* temp = new Text(content);
-				Add(temp, auto_release);
-				type.resize(Size());
-				type[type.size() - 1] = 1;
-				return *this;
-			}
-			Pulldown& AddButton(std::string icon, std::string content) {
-				ColorText* temp = new ColorText(icon, content);
+				ColorText* temp = new ColorText(content);
 				Add(temp, auto_release);
 				type.resize(Size());
 				type[type.size() - 1] = 1;
@@ -6478,7 +6546,7 @@ namespace ggcc {
 			void Open() {
 				open = true;
 				angle.stp(acos(-1) / 2).sd(300).sms(anif::bounce5);
-				move.stp(1).sd(500).sms(anif::classics);
+				move.stp(1).sd(500).sms(anif::classics_d);
 			}
 			void Close() {
 				open = false;
@@ -6892,7 +6960,6 @@ namespace ggcc {
 				// 界面可见，检查是否启动淡入动画
 				appearAni.update();
 				if (restart_animation) {
-					sbar.GotoTop();
 					appearAni.ssp(0), restart_animation = false;
 				}
 				appearAni.stp(1);
@@ -7501,10 +7568,10 @@ namespace ggcc {
 				}
 
 				// 绘制侧边栏
-				BeginScissor(x, y, w, h);
+				if (!is_mainwin) BeginScissor(x, y, w, h);
 				sider.Draw(x, y, w, h, check);
 				int tx = x, ty = y, tw = w, th = h;
-				
+
 				// 绘制空页面
 				if (Size() == 0) ui::PrintMiddle(sider.X, sider.Y, sider.W, sider.H, "EMPTY WINDOW");
 
@@ -7542,7 +7609,7 @@ namespace ggcc {
 						);
 					}
 				}
-				EndScissor();
+				if (!is_mainwin) EndScissor();
 
 				// 绘制标题
 				if (draw_title) {
@@ -8108,8 +8175,8 @@ namespace ggcc {
 			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			return *temp;
 		}
-		ui::ColorText &ColorText(std::string content, Color color) {
-			ui::ColorText* temp = new ui::ColorText(content, color);
+		ui::ColorText &ColorText(std::string content, Color color = ui::TextColor2, Color bgcolor = BLANK) {
+			ui::ColorText* temp = new ui::ColorText(content, color, bgcolor);
 			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			return *temp;
 		}
@@ -8133,8 +8200,8 @@ namespace ggcc {
 			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			return *temp;
 		}
-		ui::Hyperlink& Hyperlink(std::string content, std::string link, std::string icon = u8"") {
-			ui::Hyperlink* temp = new ui::Hyperlink(icon, content, link);
+		ui::Hyperlink& Hyperlink(std::string content, std::string link = "") {
+			ui::Hyperlink* temp = new ui::Hyperlink(content, link);
 			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			return *temp;
 		}
@@ -8153,8 +8220,8 @@ namespace ggcc {
 			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			return *temp;
 		}
-		ui::RadioBox &RadioBox() {
-			ui::RadioBox* temp = new ui::RadioBox();
+		ui::RadioBox &RadioBox(std::vector<std::string> content, int choose = -1, int* ptr = nullptr) {
+			ui::RadioBox* temp = new ui::RadioBox(content, choose, ptr);
 			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			return *temp;
 		}
@@ -8168,13 +8235,13 @@ namespace ggcc {
 			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			return *temp;
 		}
-		ui::Slider &Slider(std::string content, realn minn, realn maxn, realn now, realn* num) {
-			ui::Slider* temp = new ui::Slider(content, minn, maxn, now, num);
+		ui::Slider &Slider(realn minn, realn maxn, realn now, realn* num) {
+			ui::Slider* temp = new ui::Slider(minn, maxn, now, num);
 			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			return *temp;
 		}
-		ui::Slider_Int &Slider_Int(std::string content, int minn, int maxn, int now, int* num) {
-			ui::Slider_Int* temp = new ui::Slider_Int(content, minn, maxn, now, num);
+		ui::Slider_Int &Slider_Int(int minn, int maxn, int now, int* num) {
+			ui::Slider_Int* temp = new ui::Slider_Int(minn, maxn, now, num);
 			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			return *temp;
 		}
