@@ -4,7 +4,7 @@
 #pragma once
 // #pragma warning(disable: 4996)
 // 以下是当前版本号
-#define UIVer "GGCC UI 2.4.1.0118"
+#define UIVer "GGCC UI 2.4.1.0123"
 
 #include <raylib.h>
 #include <rlgl.h>
@@ -2655,10 +2655,10 @@ namespace ggcc {
 				if (strikeoutline_visible) {
 					for (int i = 0; i < lines; i++) {
 						DrawLineEx(
-							Vector2{(x - rx + interval) * 1.0f, (y + i * (UnitHeight + SpaceSize) + interval) * 1.0f + UnitHeight * 0.5f},
-							Vector2{(x + std::min(size.x, realn(w - rx - interval * 2))) * 1.0f, (y + i * (UnitHeight + SpaceSize) + interval) * 1.0f + UnitHeight * 0.5f},
-							dpi, color2
-							);
+						    Vector2{(x - rx + interval) * 1.0f, (y + i * (UnitHeight + SpaceSize) + interval) * 1.0f + UnitHeight * 0.5f},
+						    Vector2{(x + std::min(size.x, realn(w - rx - interval * 2))) * 1.0f, (y + i * (UnitHeight + SpaceSize) + interval) * 1.0f + UnitHeight * 0.5f},
+						    dpi, color2
+						);
 					}
 				}
 				click = false;
@@ -5677,6 +5677,7 @@ namespace ggcc {
 			vector2d choose_pos1 = {0, 0};			// 选择起始点
 			vector2d choose_pos2 = {0, 0};			// 选择终止点
 			Animation ipx, ipy;						// 光标行、列位置动画
+			Button copybtn;							// 复制按钮
 
 		public:
 			std::vector<std::string> input;			// 文本
@@ -5716,10 +5717,29 @@ namespace ggcc {
 				return *this;
 			}
 
-			TextBox() {}
+			TextBox() {
+				copybtn = Button(u8"[]Copy").withCallback([&] {
+					std::string str;
+					for (int i = 0; i < input.size(); i++) {
+						if (i != 0) str += "\r\n";
+						str += input[i];
+					}
+					message::Send_Tip("已复制到剪切板");
+					SetClipboardText(str.c_str());
+				});
+			}
 			TextBox(std::string content_, std::string text) {
 				SetText(text);
 				content = content_;
+				copybtn = Button(u8"[]Copy").withCallback([&] {
+					std::string str;
+					for (int i = 0; i < input.size(); i++) {
+						if (i != 0) str += "\r\n";
+						str += input[i];
+					}
+					message::Send_Tip("已复制到剪切板");
+					SetClipboardText(str.c_str());
+				});
 			}
 			int GetSize() {
 				int s = input.size();
@@ -5779,15 +5799,6 @@ namespace ggcc {
 				DrawCircle(x + SpaceSize * 2 + TextHeight * 1.5, y + SpaceSize * 2 + TextHeight / 2, TextHeight * 0.3, ColorF(YELLOW));
 				DrawCircle(x + SpaceSize * 2 + TextHeight * 2.5, y + SpaceSize * 2 + TextHeight / 2, TextHeight * 0.3, ColorF(GREEN));
 				Print(x + SpaceSize * 2 + TextHeight * 3.5, y + SpaceSize * 2, content);
-				static Button copybtn = Button(u8"[]Copy").withCallback([&] {
-					std::string str;
-					for (int i = 0; i < input.size(); i++) {
-						if (i != 0) str += "\r\n";
-						str += input[i];
-					}
-					message::Send_Tip("已复制到剪切板");
-					SetClipboardText(str.c_str());
-				});
 				copybtn.Draw_Auto(x + w - copybtn.GetWidth() - ui::SpaceSize, y, copybtn.GetWidth());
 				// 绘制行号
 				int tempW = 0;
@@ -6026,10 +6037,19 @@ namespace ggcc {
 					DrawLineEx(_V(p1), _V(p1 + (p2 - p1)*t1), dpi, ColorF(WHITE));
 					DrawLineEx(_V(p2), _V(p2 + (p3 - p2)*t2), dpi, ColorF(WHITE));
 				}
-				if (check && MouseInRect(x, y, width, UnitHeight)) {
-					DrawRectangle(x, y, UnitHeight, UnitHeight, ColorF(ChooseColor));
-					if (IsMousePressed(MOUSE_BUTTON_LEFT)) {
-						choose = !choose;
+				if (draw_box_background) {
+					if (check && MouseInRect(x, y, width, UnitHeight)) {
+						DrawRectangle(x, y, UnitHeight, UnitHeight, ColorF(ChooseColor));
+						if (IsMousePressed(MOUSE_BUTTON_LEFT)) {
+							choose = !choose;
+						}
+					}
+				} else {
+					if (check && MouseInRect(x, y, w, UnitHeight)) {
+						DrawRectangle(x, y, UnitHeight, UnitHeight, ColorF(ChooseColor));
+						if (IsMousePressed(MOUSE_BUTTON_LEFT)) {
+							choose = !choose;
+						}
 					}
 				}
 				if (ptr) *ptr = choose;
@@ -6109,11 +6129,21 @@ namespace ggcc {
 					EndAlphaMode();
 				}
 				Print(x + UnitHeight + SpaceSize * 2, y + h, rtext[id]);
-				if (check && MouseInRect(x, y, width, UnitHeight)) {
-					DrawCircle(x + UnitHeight / 2, y + UnitHeight / 2, UnitHeight / 2, ColorF(ChooseColor));
-					if (IsMousePressed(MOUSE_BUTTON_LEFT)) {
-						choose_ani[id].stp(1);
-						choose = id;
+				if (draw_box_background) {
+					if (check && MouseInRect(x, y, width, UnitHeight)) {
+						DrawCircle(x + UnitHeight / 2, y + UnitHeight / 2, UnitHeight / 2, ColorF(ChooseColor));
+						if (IsMousePressed(MOUSE_BUTTON_LEFT)) {
+							choose_ani[id].stp(1);
+							choose = id;
+						}
+					}
+				} else {
+					if (check && MouseInRect(x, y, w, UnitHeight)) {
+						DrawCircle(x + UnitHeight / 2, y + UnitHeight / 2, UnitHeight / 2, ColorF(ChooseColor));
+						if (IsMousePressed(MOUSE_BUTTON_LEFT)) {
+							choose_ani[id].stp(1);
+							choose = id;
+						}
 					}
 				}
 				return UnitHeight;
@@ -6154,10 +6184,12 @@ namespace ggcc {
 			int Width = 0;						// 控件总宽度
 			std::vector<char> type; 			// 控件类型
 			std::vector<Pulldown*> menu;		// 指向菜单
+			std::vector<std::function<void()> > callback;// 回调函数
 			Vector2 pos;						// 位置
 			bool open = false;					// 是否展开
 			RenderTexture texture;				// texture
 			int texture_inited = 0;				// 是否初始化texture
+			int unit_interval = SpaceSize;		// 控件间距
 
 			realn GetAniBias(int id) {
 				return (1 - appearAni.GetPos(gclock() - id * 50)) * 100 * dpi;
@@ -6205,6 +6237,11 @@ namespace ggcc {
 				Add(temp, auto_release);
 				type.resize(Size());
 				type[type.size() - 1] = 3;
+				return *this;
+			}
+			Pulldown& withCallback(std::function <void()> callback_) {
+				callback.resize(Size());
+				callback[Size() - 1] = callback_;
 				return *this;
 			}
 			Pulldown& AddMenu(std::string content, Pulldown* temp = nullptr, ReleaseFunc fun = nullptr) {
@@ -6268,6 +6305,8 @@ namespace ggcc {
 			int Draw(int x, int y, int w, int h, bool check) {
 				// 判断是否收起
 				if (!open && wani.gnp() == 0) {
+					texture_inited = 0;
+					UnloadRenderTexture(texture);
 					pop = false;
 					width = wp::strLen(content) * TextHeight / 2 + TextHeight + SpaceSize * 3 + TextHeight / 2;
 					return h;
@@ -6287,6 +6326,7 @@ namespace ggcc {
 				// 计算控件总高度和总高度
 				type.resize(Size());
 				menu.resize(Size());
+				callback.resize(Size());
 				Height = 0;
 				Width = 0;
 				for (int i = 0; i < key.size(); i++) {
@@ -6296,12 +6336,12 @@ namespace ggcc {
 						Width = std::max(Width, key[i]->width);
 						continue;
 					}
-					Height += key[i]->GetHeight();
+					Height += key[i]->GetHeight() + unit_interval;
 					Width = std::max(Width, key[i]->width);
 				}
 				// 更新
 				Width += SpaceSize * 2 + UnitHeight * 2;
-				Height += SpaceSize * 2;
+				Height += unit_interval * 3;
 				w = Width;
 				h = Height;
 				if (open) {
@@ -6329,20 +6369,21 @@ namespace ggcc {
 					}
 					BeginTextureMode(texture);
 					DrawRectangle(0, 0, w, h, MenuColor);
-					int nowh = SpaceSize;
+					int nowh = unit_interval * 1.5;
 					for (int i = 0; i < key.size(); i++) {
 						if (type[i] == 0 || type[i] == 3) {
-							nowh += key[i]->Draw_Auto(SpaceSize * 2, nowh, w - SpaceSize * 4);
+							nowh += key[i]->Draw_Auto(SpaceSize * 2, nowh, w - SpaceSize * 4, check);
 						} else if (type[i] == 1) {
-							nowh += key[i]->Draw_Auto(SpaceSize * 2, nowh, w - SpaceSize * 4);
+							nowh += key[i]->Draw_Auto(SpaceSize * 2, nowh, w - SpaceSize * 4, check);
 						} else if (type[i] == 2) {
 							if (!menu[i]) continue;
 							Print(SpaceSize * 3 + TextHeight, nowh + (UnitHeight - TextHeight) / 2, menu[i]->content);
 							Print(w - SpaceSize * 2 - TextHeight / 2, nowh + (UnitHeight - TextHeight) / 2, ">", LineColor);
 							nowh += UnitHeight;
 						} else if (type[i] == 4) {
-							nowh += key[i]->Draw_Auto(SpaceSize * 2, nowh, w - SpaceSize * 4);
+							nowh += key[i]->Draw_Auto(SpaceSize * 2, nowh, w - SpaceSize * 4, check);
 						}
+						nowh += unit_interval;
 					}
 					EndTextureMode();
 				}
@@ -6360,25 +6401,31 @@ namespace ggcc {
 						else if (type[i] == 4) nowh += key[i]->GetHeight();
 					}
 				} else {
-//					texture_inited = 0;
 					BeginScissor(x - dpi, y - dpi, wani.gnp() + dpi * 2, hani.gnp() + dpi * 2);
 					BeginAlphaMode(GetAniAlpha(0));
 					special_effect::DrawFrame(x - dpi, y - dpi, wani.gnp() + dpi * 2, hani.gnp() + dpi * 2);
 					DrawRectangle(x, y, wani.gnp(), hani.gnp(), ColorF(MenuColor));
 					x -= w - wani.gnp();
 					y -= h - hani.gnp();
-					y += SpaceSize;
+					y += unit_interval * 1.5;
 					int nowh = 0;
 					for (int i = 0; i < key.size(); i++) {
 						bool next_check = (check && MouseInRect(x, y, wani.gnp(), hani.gnp()));
 						if (type[i] == 0 || type[i] == 3) {
-							if (!wani.is_run() && MouseInRect(x, y + nowh, w, key[i]->height) && type[i] != 3)DrawRectangle(x, y + nowh, w, key[i]->height, ColorF(ChooseColor));
+							if (!wani.is_run() && MouseInRect(x, y + nowh, w, key[i]->height) && type[i] != 3) {
+								DrawRectangle(x, y + nowh - unit_interval / 2, w, UnitHeight + unit_interval, ColorF(ChooseColor));
+							}
 							nowh += key[i]->Draw_Auto(x + SpaceSize * 2, y + nowh, w - SpaceSize * 4, next_check);
 						} else if (type[i] == 1) {
 							if (!wani.is_run() && MouseInRect(x, y + nowh, w, UnitHeight)) {
-								DrawRectangle(x, y + nowh, w, UnitHeight, ColorF(ChooseColor));
-								if (next_check && IsMousePressed(MOUSE_BUTTON_LEFT)) click = key[i]->content;
-								if (next_check && IsMouseDown(MOUSE_BUTTON_LEFT)) DrawRectangle(x, y + nowh, w, UnitHeight, ColorF(ChooseColor));
+								DrawRectangle(x, y + nowh - unit_interval / 2, w, UnitHeight + unit_interval, ColorF(ChooseColor));
+								if (next_check && IsMousePressed(MOUSE_BUTTON_LEFT)) {
+									click = key[i]->content;
+									if (callback[i]) callback[i]();
+								}
+								if (next_check && IsMouseDown(MOUSE_BUTTON_LEFT)) {
+									DrawRectangle(x, y + nowh - unit_interval / 2, w, UnitHeight + unit_interval, ColorF(ChooseColor));
+								}
 							}
 							nowh += key[i]->Draw_Auto(x + SpaceSize * 2, y + nowh, w - SpaceSize * 4, next_check);
 						} else if (type[i] == 2) {
@@ -6387,23 +6434,29 @@ namespace ggcc {
 							Print(x + w - SpaceSize * 2 - TextHeight / 2, y + nowh + (UnitHeight - TextHeight) / 2, ">", LineColor);
 							menu[i]->SetPos(x + wani.gnp() + SpaceSize, y + nowh);
 							if (!wani.is_run() && MouseInRect(x, y + nowh, w, UnitHeight)) {
-								DrawRectangle(x, y + nowh, w, UnitHeight, ColorF(ChooseColor));
+								DrawRectangle(x, y + nowh - unit_interval / 2, w, UnitHeight + unit_interval, ColorF(ChooseColor));
 								if (next_check && IsMousePressed(MOUSE_BUTTON_LEFT)) menu[i]->ChangeState(x + wani.gnp() + SpaceSize, y + nowh);
-								if (next_check && IsMouseDown(MOUSE_BUTTON_LEFT)) DrawRectangle(x, y + nowh, w, UnitHeight, ColorF(ChooseColor));
+								if (next_check && IsMouseDown(MOUSE_BUTTON_LEFT)) {
+									DrawRectangle(x, y + nowh - unit_interval / 2, w, UnitHeight + unit_interval, ColorF(ChooseColor));
+								}
 							}
 							nowh += UnitHeight;
 						} else if (type[i] == 4) {
-							if (!wani.is_run() && MouseInRect(x, y + nowh, w, key[i]->height) && type[i] != 3) {
-								DrawRectangle(x, y + nowh + int((Mouse.y - y - nowh) / UnitHeight) * UnitHeight, w, UnitHeight, ColorF(ChooseColor));
+							if (!wani.is_run() && MouseInRect(x, y + nowh - unit_interval / 2, w, key[i]->height + unit_interval / 2) && type[i] != 3) {
+								DrawRectangle(
+								    x, y + nowh + int((Mouse.y - y - nowh) / (UnitHeight + SpaceSize)) * (UnitHeight + SpaceSize) - unit_interval / 2,
+								    w, UnitHeight + SpaceSize, ColorF(ChooseColor)
+								);
 							}
 							nowh += key[i]->Draw_Auto(x + SpaceSize * 2, y + nowh, w - SpaceSize * 4, next_check);
 						}
+						nowh += unit_interval;
 					}
 					EndAlphaMode();
 					EndScissor();
 				}
 				if (check && DebugMode) {
-					DrawRectangleLines(x, y - SpaceSize, w, h, ORANGE);
+					DrawRectangleLines(x, y - unit_interval * 1.5, w, h, ORANGE);
 				}
 				// 结束
 				width = wp::strLen(content) * TextHeight / 2 + TextHeight + SpaceSize * 3 + TextHeight / 2;
