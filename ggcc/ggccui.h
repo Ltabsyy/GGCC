@@ -836,8 +836,8 @@ namespace ggcc {
 		}
 		vector2d GetPrintRectSize(int x, int y, int w, std::string text) {
 			int h = GetPrintRectLine(x, y, w, text);
-			if (h == 1)return vector2d(wp::strLen(text) * TextHeight / 2, UnitHeight);
-			else return vector2d(w, h * UnitHeight);
+			if (h == 1) return vector2d(wp::strLen(text) * TextHeight / 2, UnitHeight);
+			else return vector2d(w, h * (UnitHeight + SpaceSize) - SpaceSize);
 		}
 		void PrintUsedCharacter() {
 			int h = GetPrintRectLine(0, winH, winW, UseCharacter.Text());
@@ -2856,7 +2856,7 @@ namespace ggcc {
 			}
 			int Draw(int x, int y, int w, bool check = true) {
 				int h = (UnitHeight - TextHeight) / 2;
-				height = GetPrintRectLine(x + SpaceSize + UnitHeight, y + SpaceSize * 3 / 2, w - SpaceSize * 2 - UnitHeight, content) * UnitHeight;
+				height = GetPrintRectSize(x + SpaceSize + UnitHeight, y + SpaceSize * 3 / 2, w - SpaceSize * 2 - UnitHeight, content).y;
 				DrawRectangle(x, y + SpaceSize / 2, w, height + SpaceSize * 2, ColorF(255, 153, 0, 100));
 				PrintIcon(x + SpaceSize * 2, y + SpaceSize * 3 / 2 + height / 2 - TextHeight / 2, u8"");
 				PrintRect(x + SpaceSize * 4 + TextHeight, y + SpaceSize * 3 / 2, w - SpaceSize * 4 - UnitHeight, content);
@@ -2871,7 +2871,7 @@ namespace ggcc {
 			}
 			int Draw(int x, int y, int w, bool check = true) {
 				int h = (UnitHeight - TextHeight) / 2;
-				height = GetPrintRectLine(x + SpaceSize + UnitHeight, y + SpaceSize * 3 / 2, w - SpaceSize * 2 - UnitHeight, content) * UnitHeight;
+				height = GetPrintRectSize(x + SpaceSize + UnitHeight, y + SpaceSize * 3 / 2, w - SpaceSize * 2 - UnitHeight, content).y;
 				DrawRectangle(x, y + SpaceSize / 2, w, height + SpaceSize * 2, ColorF(192, 44, 56, 100));
 				PrintIcon(x + SpaceSize * 2, y + SpaceSize * 3 / 2 + height / 2 - TextHeight / 2, u8"");
 				PrintRect(x + SpaceSize * 4 + TextHeight, y + SpaceSize * 3 / 2, w - SpaceSize * 4 - UnitHeight, content);
@@ -4759,12 +4759,12 @@ namespace ggcc {
 			std::stack<InputHistory> history2;		// 撤销历史（用于重做）
 			int last_history_len = -1;				// 我也不知道这是干啥的
 
-			MultiInputBox() {
+			MultiInputBox(std::string content_ = "MultiInputBox") {
 				ipx.sd(100), ipy.sd(150);
 				extra = true;
 				sx.SetBlank(0), sy.SetBlank(0);
 				input.push_back("");
-				content = "MultiInputBox";
+				content = content_;
 			}
 			MultiInputBox& SetLabelVisible(bool on) {
 				label_visible = on;
@@ -5897,58 +5897,143 @@ namespace ggcc {
 		class Table : public Element {
 		private:
 			ui::SliderBar sx;						// 横向滚动条
+			ui::SliderBar sy;						// 纵向滚动条
 			std::vector <int> colwidth;				// 列宽度
+			std::vector <int> colstartx;			// 列起始位置
+			std::vector <int> rowheight;			// 行高度
+			std::vector <int> rowstarty;			// 行起始位置
 			int cols = 0, rows = 0;					// 行数、列数
+			int max_width = UnitHeight * 15;		// 最大宽度
+			int interval = UnitHeight;				// 间隔大小
 			vector2d size{0, 0};					// 表格大小
+			void DrawTable(int x, int y, bool check = true) {
+				// 计算裁剪区
+				float six, siy, siw, sih;
+				GetScissor(&six, &siy, &siw, &sih);
+				// 找到绘制起始终止位置
+				auto xit1 = std::lower_bound(colstartx.begin(), colstartx.end(), six - x + sx.Now());
+				auto xit2 = std::lower_bound(colstartx.begin(), colstartx.end(), six - x + siw + sx.Now());
+				int xid1 = std::distance(colstartx.begin(), xit1);
+				int xid2 = std::distance(colstartx.begin(), xit2);
+				if (xid1 > 0) xid1--;
+				auto yit1 = std::lower_bound(rowstarty.begin(), rowstarty.end(), siy - y + sy.Now());
+				auto yit2 = std::lower_bound(rowstarty.begin(), rowstarty.end(), siy - y + sih + sy.Now());
+				int yid1 = std::distance(rowstarty.begin(), yit1);
+				int yid2 = std::distance(rowstarty.begin(), yit2);
+				if (yid1 > 0) yid1--;
+				// 绘制表格
+				for (int i = yid1; i < yid2; i++) {
+					int tmpx = x - sx.Now();
+					int tmpy = rowstarty[i] + y - sy.Now();
+					for (int j = xid1; j < xid2; j++) {
+						DrawRectangleLines(tmpx + colstartx[j], tmpy, colwidth[j], rowheight[i], ColorF(LineColor));
+						vector2d rect = GetPrintRectSize(0, 0, colwidth[j] - TextHeight * 2, items[i][j]);
+						PrintRect(
+							tmpx + colstartx[j] + (colwidth[j] - rect.x) / 2, 
+							tmpy + (rowheight[i] - rect.y) / 2, 
+							colwidth[j] - TextHeight * 2, 
+							items[i][j]
+							);
+					}
+				}
+				// 绘制边框
+				DrawRectangleLines(x - sx.Now(), y - sy.Now(), size.x, size.y, ColorF(WHITE));
+			}
 
 		public:
 			std::vector <std::vector <std::string> > items;
 			Table() {
 				items.resize(1);
+				CalcInfo();
+				extra = true;
 			}
 			Table(std::vector <std::vector <std::string> > items_) {
 				items = items_;
+				extra = true;
+				CalcInfo();
 			}
 			Table& SetItems(std::vector <std::vector <std::string> > items_) {
 				items = items_;
+				CalcInfo();
 				return *this;
 			}
 			Table& AddRow(std::vector <std::string> items_) {
 				items.push_back(items_);
 				return *this;
 			}
-			int Draw(int x, int y, int w, bool check = true) {
-				// 计算文本长度
+			Table& SetExtra(bool on) {
+				extra = on;
+				return *this;
+			}
+			void CalcInfo() {
 				rows = items.size();
-				if (items.size() == 0) return 1;
 				cols = items[0].size();
 				for (int i = 0; i < rows; i++) items[i].resize(cols);
-				if (colwidth.size() != items[0].size()) colwidth.resize(items[0].size());
+				if (colwidth.size()  != cols) colwidth .resize(cols);
+				if (colstartx.size() != cols) colstartx.resize(cols);
+				if (rowheight.size() != rows) rowheight.resize(rows);
+				if (rowstarty.size() != rows) rowstarty.resize(rows);
 				size.x = size.y = 0;
-				size.y = rows * (TextHeight + SpaceSize * 2);
 				for (int i = 0; i < cols; i++) {
 					colwidth[i] = 0;
-					for (int j = 0; j < rows; j++) colwidth[i] = std::max(colwidth[i], wp::strLen(items[j][i]) * TextHeight / 2 + TextHeight * 2);
+					colstartx[i] = size.x;
+					for (int j = 0; j < rows; j++) {
+						int tmpw = wp::strLen(items[j][i]) * TextHeight / 2 + TextHeight * 2;
+						if (tmpw > max_width) tmpw = max_width;
+						colwidth[i] = std::max(colwidth[i], tmpw);
+					}
 					size.x += colwidth[i];
 				}
-				height = size.y + SliderWidth;
-				// 绘制表格
 				for (int i = 0; i < rows; i++) {
-					int tmpx = x - sx.Now();
+					rowheight[i] = 0;
+					rowstarty[i] = size.y;
 					for (int j = 0; j < cols; j++) {
-						DrawRectangleLines(tmpx, y + i * (TextHeight + SpaceSize * 2), colwidth[j], TextHeight + SpaceSize * 2, ColorF(LineColor));
-						ui::PrintMiddle(tmpx, y + i * (TextHeight + SpaceSize * 2), colwidth[j], TextHeight + SpaceSize * 2, items[i][j]);
-						tmpx += colwidth[j];
+						int tmph = GetPrintRectSize(0, 0, colwidth[j] - TextHeight * 2, items[i][j]).y;
+						rowheight[i] = std::max(rowheight[i], tmph);
 					}
+					rowheight[i] += SpaceSize;
+					size.y += rowheight[i];
 				}
+				height = size.y + SliderWidth;
+			}
+			int Draw(int x, int y, int w, bool check = true) {
+				// 表格无内容，舍去
+				if (cols == 0 || rows == 0) return 1;
+				// 绘制表格
+				DrawTable(x, y, check);
 				// 绘制滚动条
 				BeginAlphaMode(0.7);
+				sy.GotoTop();
 				sx.SetControl(x, y, w, size.y);
 				sx.SetDrawBackground(false);
 				sx.SetSum(size.x);
 				sx.SetBlank(0);
 				sx.Draw_Auto_Extra(x, y + size.y, w, SliderWidth);
 				sx.Update();
+				EndAlphaMode();
+				return height;
+			}
+			int Draw(int x, int y, int w, int h, bool check = true) {
+				// 表格无内容，舍去
+				if (cols == 0 || rows == 0) return 1;
+				// 绘制表格
+				BeginScissor(x, y, w, h);
+				DrawTable(x + interval, y + interval, check);
+				EndScissor();
+				// 绘制滚动条
+				BeginAlphaMode(0.7);
+				sx.SetControl(x, y, w, h);
+				sx.SetDrawBackground(false);
+				sx.SetSum(size.x + interval + SliderWidth);
+				sx.SetBlank(0);
+				sx.Draw_Auto_Extra(x, y + h - SliderWidth, w - SliderWidth, SliderWidth);
+				sx.Update();
+				sy.SetControl(x, y, w, h);
+				sy.SetDrawBackground(false);
+				sy.SetSum(size.y + interval + SliderWidth);
+				sy.SetBlank(0);
+				sy.Draw_Auto_Extra(x + w - SliderWidth, y, SliderWidth, h - SliderWidth);
+				sy.Update();
 				EndAlphaMode();
 				return height;
 			}
@@ -6506,9 +6591,9 @@ namespace ggcc {
 			void DrawOne(int id, int x, int y, int w, int h, bool check = true) {
 				int t = (h - TextHeight) / 2;
 				special_effect::DrawMouseRectangle(x, y + SpaceSize / 2, w, h - SpaceSize);
-				PrintIcon(x + SpaceSize * 1.5, y + t, icon[id], MenuFtColor);
-				if (icon[id] == "") Print(x + SpaceSize * 1.5 + wp::strLen(icon[id]) * ui::TextHeight / 2, y + t, mtext[id], MenuFtColor);
-				else Print(x + SpaceSize * 2 + wp::strLen(icon[id])*ui::TextHeight / 2, y + t, mtext[id], MenuFtColor);
+				PrintIcon(x + SpaceSize * 2, y + t, icon[id], ThemeColor);
+				if (icon[id] == "") Print(x + SpaceSize * 2 + wp::strLen(icon[id]) * ui::TextHeight / 2, y + t, mtext[id], MenuFtColor);
+				else Print(x + SpaceSize * 4 + wp::strLen(icon[id])*ui::TextHeight / 2, y + t, mtext[id], MenuFtColor);
 				if (MouseInRect(x, y + SpaceSize / 2, w, h - SpaceSize)) {
 					DrawRectangle(x, y + SpaceSize / 2, w, h - SpaceSize, ColorF(ChooseColor));
 					if (opened) {
@@ -6522,7 +6607,7 @@ namespace ggcc {
 							menu[id]->Open(x, y + h + SpaceSize);
 							opened = true;
 						}
-						if (callback[id])callback[id]();
+						if (callback[id]) callback[id]();
 					}
 				}
 			}
@@ -6533,9 +6618,9 @@ namespace ggcc {
 				click = -1;
 				for (int i = 0; i < mtext.size(); i++) {
 					int s = (wp::strLen(mtext[i]) + wp::strLen(icon[i])) * TextHeight / 2;
-					if (icon[i] == "" || mtext[i] == "") s -= ui::SpaceSize;
-					DrawOne(i, x + w2, y, s + SpaceSize * 4, h, check);
-					w2 += s + SpaceSize * 4 + dpi;
+					if (icon[i] == "" || mtext[i] == "") s -= ui::SpaceSize * 2;
+					DrawOne(i, x + w2, y, s + SpaceSize * 6, h, check);
+					w2 += s + SpaceSize * 6 + dpi;
 				}
 				return Height;
 			}
@@ -6637,7 +6722,7 @@ namespace ggcc {
 				if (node.value().icon == "") Print(x + NodeHeight + SpaceSize * 2, y + tempH, node.value().content);
 				else {
 					PrintIcon(x + NodeHeight + SpaceSize * 2, y + tempH, node.value().icon, ThemeColor);
-					Print(x + NodeHeight + SpaceSize * 3 + NodeHeight, y + tempH, node.value().content);
+					Print(x + NodeHeight + SpaceSize * 2 + NodeHeight, y + tempH, node.value().content);
 				}
 				int width = wp::strLen(node.value().content) * TextHeight / 2 + NodeHeight + SpaceSize * 4;
 				if (node.size() > 0) {
@@ -7045,7 +7130,7 @@ namespace ggcc {
 						if (shiftpos == spos_bottom) sy = sider.H * 0.3, sx = 0, dy = -sider.H * 0.3 * shiftAni.gnp(), dx = 0;
 						if (!key.empty() && key[keyid2]) {
 							BeginAlphaMode(shiftAni.gnp());
-							key[keyid2]->Draw_Auto_Extra(sider.X + sider.W * 0.3 + b + dx + sx, sider.Y + b + dy + sy, sider.W - b * 2, sider.H - b * 2, check);
+							key[keyid2]->Draw_Auto_Extra(sider.X + b + dx + sx, sider.Y + b + dy + sy, sider.W - b * 2, sider.H - b * 2, check);
 							EndAlphaMode();
 						}
 						if (key.size() >= 2 && key[keyid2 - 1]) {
@@ -8321,8 +8406,8 @@ namespace ggcc {
 			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			return *temp;
 		}
-		ui::MultiInputBox& MultiInputBox() {
-			ui::MultiInputBox* temp = new ui::MultiInputBox;
+		ui::MultiInputBox& MultiInputBox(std::string content = "") {
+			ui::MultiInputBox* temp = new ui::MultiInputBox(content);
 			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			return *temp;
 		}
@@ -8333,6 +8418,11 @@ namespace ggcc {
 		}
 		ui::Table& Table(std::vector <std::vector <std::string> > items) {
 			ui::Table* temp = new ui::Table(items);
+			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
+			return *temp;
+		}
+		ui::Table& Table() {
+			ui::Table* temp = new ui::Table();
 			if (GetFatherElement() != nullptr)GetFatherElement()->Add(temp, ui::auto_release);
 			return *temp;
 		}
@@ -8489,8 +8579,9 @@ namespace ggcc {
 				while (!done) {
 					BeginDrawing();
 					ClearBackground(ui::BgColor);
-					ui::special_effect::DrawLoadingCircle(ui::winW / 2, ui::winH / 2, 50 * ui::dpi, text);
 					ui::Update();
+					DrawRectangle(0, 0, ui::winW, ui::winH, ui::ColorF(BLACK, 0.6));
+					ui::special_effect::DrawLoadingCircle(ui::winW / 2, ui::winH / 2, 50 * ui::dpi, text);
 					EndDrawing();
 					if (WindowShouldClose()) {
 						if (IsKeyPressed(KEY_ESCAPE)) continue;
